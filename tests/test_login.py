@@ -44,7 +44,7 @@ def test_login_successful(page: Page, request: pytest.FixtureRequest):
 
     # Perform visual regression testing
     logger.info("Performing visual comparison for the account page.")
-    score, diff_image = imageComparison.compare_test_run_images(page, request)
+    score, diff_image = imageComparison.compare_test_run_images(page, request.node.name)
     
     # Assert that the visual similarity score meets the threshold
     assert score >= VISUAL_THRESHOLD, (
