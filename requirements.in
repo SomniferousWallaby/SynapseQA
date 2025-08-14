@@ -1,0 +1,8 @@
+playwright
+pytest
+pytest-playwright
+python-dotenv
+scikit-image
+opencv-python
+google-generativeai
+beautifulsoup4

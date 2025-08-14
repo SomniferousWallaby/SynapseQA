@@ -1,0 +1,31 @@
+# --- Project-specific Artifacts ---
+elements/
+images/
+logs/
+
+# --- Environment & Secrets ---
+.venv
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# --- Python cache & compiled files ---
+__pycache__/
+*.py[cod]
+
+# --- Test & Coverage Artifacts ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Build Artifacts ---
+build/
+dist/
+*.egg-info/
+
+# --- IDE / Editor & OS-specific Files ---
+.idea/
+.vscode/
+.DS_Store
