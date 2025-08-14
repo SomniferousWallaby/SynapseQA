@@ -1,16 +1,9 @@
 import logging
 import pytest
-from dotenv import dotenv_values
 from playwright.sync_api import Page, expect
-from utilities import genAITestGenerator, smartElementFinder
+from utilities import genAITestGenerator, smartElementFinder, config
 
 logger = logging.getLogger(__name__)
-
-# --- Environment Variable Loading ---
-config = dotenv_values()
-BASE_URL = config.get("BASE_URL")
-if not BASE_URL:
-    raise ValueError("BASE_URL not set in .env file.")
 
 
 def test_ai_login_flow(page: Page):
@@ -18,8 +11,8 @@ def test_ai_login_flow(page: Page):
     Generates and executes a test flow based on a natural language command.
     """
     # Define the command with placeholders for credentials.
-    test_user = config.get("TEST_USER")
-    test_password = config.get("PASSWORD")
+    test_user = config.TEST_USER
+    test_password = config.PASSWORD
 
     user_command = f"go to the login page, fill in the email with '{test_user}', fill in the password with '{test_password}', and click the login button"
     logger.info(f"Executing AI test for command: '{user_command}'")
@@ -33,17 +26,17 @@ def test_ai_login_flow(page: Page):
 
     # 2. Check login was successful
     logger.info("All AI-generated steps executed. Verifying final state.")
-    expect(page).to_have_url(f"{BASE_URL}account")
+    expect(page).to_have_url(f"{config.BASE_URL}{config.ACCOUNT_PAGE_PATH}")
 
 def test_profile_update(page: Page):
     """
     Generates an executes a test flow to update a user's profile based on a natural language command.
     """
-    test_user = config.get("TEST_USER")
-    test_password = config.get("PASSWORD")
+    test_user = config.TEST_USER
+    test_password = config.PASSWORD
 
     # 1. Login
-    page.goto(f"{BASE_URL}auth/login")
+    page.goto(f"{config.BASE_URL}{config.LOGIN_PAGE_PATH}")
     user_command_1 = (f"On the login page, fill in the email with '{test_user}', fill in the password with '{test_password}', and click the login button ")
     logger.info(f"Executing AI test for command: '{user_command_1}'")
     try:
@@ -74,7 +67,7 @@ def test_profile_update(page: Page):
 
     # 4. Assert the update was successful
     logger.info("All AI-generated steps executed. Verifying final state.")
-    expect(page).to_have_url(f"{BASE_URL}account/profile")
+    expect(page).to_have_url(f"{config.BASE_URL}{config.ACCOUNT_PAGE_PATH}/profile")
     success_message = smartElementFinder.find_element_smart(page, 'profilePage', 'update_success_message')
     expect(success_message).to_be_visible()
     expect(success_message).to_have_text("Your profile is successfully updated!")

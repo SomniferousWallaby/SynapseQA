@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "intelli-test"
+version = "1.0.0"
+description = "An AI-powered test automation toolkit with a FastAPI interface."
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "python-dotenv",
+    "playwright",
+    "pytest",
+    "google-generativeai",
+    "scikit-image",
+    "opencv-python",
+    "beautifulsoup4",
+]
+
+[project.scripts]
+create-auth-state = "intelli_test.utilities.create_auth_state:main_sync"

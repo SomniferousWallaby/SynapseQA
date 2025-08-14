@@ -29,3 +29,6 @@ dist/
 .idea/
 .vscode/
 .DS_Store
+
+# --- Authentication State ---
+auth_state.json
