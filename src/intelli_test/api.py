@@ -29,10 +29,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Static Files Mount ---
-# This will serve the built frontend application in production
-static_files_path = os.path.join(config.PROJECT_ROOT, 'frontend', 'build')
-app.mount("/static", StaticFiles(directory=static_files_path), name="static")
+# --- Static Files Mount (for Production) ---
+# This serves the built React app. It's configured to not crash if the build folder doesn't exist (e.g., in development).
+# Correctly determine the project root, which is two levels up from this file's directory (api.py -> src -> project_root)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+static_files_path = os.path.join(project_root, 'frontend', 'build')
+
+if os.path.isdir(static_files_path):
+    # Mount at the root to serve the SPA. `html=True` is for client-side routing.
+    app.mount("/", StaticFiles(directory=static_files_path, html=True), name="static-root")
+    logger.info(f"Serving static production build from: {static_files_path}")
+else:
+    logger.warning(f"Static production build directory not found at '{static_files_path}'. This is expected in development.")
 
 class FingerprintRequest(BaseModel):
     url: str
@@ -127,9 +135,11 @@ async def create_fingerprint(request: FingerprintRequest, background_tasks: Back
 @app.get("/files/fingerprints")
 async def list_fingerprint_files():
     """Returns a list of available fingerprint JSON files."""
-    elements_dir = os.path.join(config.PROJECT_ROOT, 'elements')
+    # Use the project_root defined at the top of this file for reliability
+    elements_dir = os.path.join(project_root, 'elements')
     if not os.path.isdir(elements_dir):
-        return []
+        logger.warning(f"Fingerprints directory not found at '{elements_dir}'. Returning empty list.")
+        return [] # Return empty list if directory doesn't exist
     try:
         return [f for f in os.listdir(elements_dir) if f.endswith('.json')]
     except Exception as e:
@@ -138,9 +148,11 @@ async def list_fingerprint_files():
 @app.get("/files/tests")
 async def list_test_files():
     """Returns a list of available test Python files."""
-    tests_dir = os.path.join(config.PROJECT_ROOT, 'tests')
+    # Use the project_root defined at the top of this file for reliability
+    tests_dir = os.path.join(project_root, 'tests')
     if not os.path.isdir(tests_dir):
-        return []
+        logger.warning(f"Tests directory not found at '{tests_dir}'. Returning empty list.")
+        return [] # Return empty list if directory doesn't exist
     try:
         # Filter out __pycache__ and other non-test files
         return [
