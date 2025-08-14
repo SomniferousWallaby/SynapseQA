@@ -2,7 +2,6 @@ from skimage.metrics import structural_similarity as ssim
 import cv2
 import os
 import shutil
-import pytest
 import logging
 from playwright.sync_api import Page
 
@@ -28,29 +27,27 @@ def compare_images(image1, image2):
 
     return score, diff
 
-def take_screenshot(page: Page, request: pytest.FixtureRequest):
+def take_screenshot(page: Page, test_name: str):
     '''
     Takes a screenshot and save it to the images folder.
     Uses the name of the current running test to identify it.
     '''
-    currentTestName = request.node.name
-    screenshot_path = os.path.join(IMAGES_FOLDER, f"{currentTestName}_current.png")
+    screenshot_path = os.path.join(IMAGES_FOLDER, f"{test_name}_current.png")
     page.screenshot(path=screenshot_path)
     logger.info(f"Screenshot saved to: {screenshot_path}")
 
 
-def compare_test_run_images(page: Page, request: pytest.FixtureRequest):
+def compare_test_run_images(page: Page, test_name: str):
     '''
     Compares a baseline images with the current image generated
     by a test. If no baseline image exists, it creates one.
     '''
-    currentTestName = request.node.name
-    baseline = os.path.join(IMAGES_FOLDER, f"{currentTestName}_baseline.png")
-    current = os.path.join(IMAGES_FOLDER, f"{currentTestName}_current.png")
+    baseline = os.path.join(IMAGES_FOLDER, f"{test_name}_baseline.png")
+    current = os.path.join(IMAGES_FOLDER, f"{test_name}_current.png")
 
     if not os.path.exists(current):
         logger.info("Current image not found. Taking screenshot of current state...")
-        take_screenshot(page, request)
+        take_screenshot(page, test_name)
 
     if not os.path.exists(baseline):
         logger.info(f"Baseline image not found. Creating...")
