@@ -8,7 +8,8 @@ from playwright.sync_api import Page
 logger = logging.getLogger(__name__)
 
 # --- Path Constants ---
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Correctly determine the project root, which is three levels up from this file's directory.
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 IMAGES_FOLDER = os.path.join(PROJECT_ROOT, 'images')
 
 def compare_images(image1, image2):

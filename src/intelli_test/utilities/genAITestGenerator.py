@@ -1,23 +1,12 @@
 import google.generativeai as genai
 import json
 import logging
-from dotenv import dotenv_values
 from playwright.sync_api import Page
-from utilities import htmlSimplifier
-
+from intelli_test.utilities import htmlSimplifier, config
 
 logger = logging.getLogger(__name__)
-config = dotenv_values()
-
-API_KEY = config.get("GENAI_API_KEY")
-MODEL_NAME = config.get("MODEL")
-BASE_URL = config.get("BASE_URL")
-
-if not all((API_KEY, MODEL_NAME, BASE_URL)):
-    raise ValueError("One or more required environment variables are not set in your .env file.")
-
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel(model_name=MODEL_NAME)
+genai.configure(api_key=config.API_KEY)
+model = genai.GenerativeModel(model_name=config.MODEL_NAME)
 
 def buildPrompt(user_command, simplifiedHTML):
     prompt = f"""
@@ -49,7 +38,8 @@ def queryGenAI(user_command, simplifiedHTML):
     Returns a list of action dictionaries or None if parsing fails.
     """
     prompt = buildPrompt(user_command, simplifiedHTML)
-    response = model.generate_content(prompt)
+    generation_config = genai.types.GenerationConfig(response_mime_type="application/json")
+    response = model.generate_content(prompt, generation_config=generation_config)
     raw_text = response.text
 
     # Clean the response text to remove markdown fences and leading/trailing whitespace
@@ -83,7 +73,7 @@ def executeGenAITest(page: Page, user_command):
 
         try:
             if action == "navigate":
-                page.goto(f"{BASE_URL}{selector}")
+                page.goto(f"{config.BASE_URL}{selector}")
             elif action == "fill":
                 page.locator(selector).fill(value)
             elif action == "click":

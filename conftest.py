@@ -1,8 +1,10 @@
-import logging
 import os
+import pytest
+import logging
+from playwright.sync_api import Page, expect, Browser
+from intelli_test.utilities import config
 
-
-def pytest_configure(config):
+def pytest_configure(_config):
     """
     Configures logging for the entire test suite run.
     This hook runs once before any tests are collected.
@@ -10,10 +12,56 @@ def pytest_configure(config):
     project_root = os.path.dirname(os.path.abspath(__file__))
     logs_folder = os.path.join(project_root, 'logs')
     os.makedirs(logs_folder, exist_ok=True)
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    
+    # Get the root logger and set the level.
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # Clear any existing handlers to avoid duplicate logs.
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
+        
+    # Create a shared formatter.
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # Add a file handler to log to a file.
+    file_handler = logging.FileHandler(
         filename=os.path.join(logs_folder, 'test_run.log'),
-        filemode='w'
+        mode='w'
     )
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+    
+    # Add a stream handler to also log to the console.
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    root_logger.addHandler(stream_handler)
+
+@pytest.fixture(scope="function")
+def logged_in_page(browser: Browser) -> Page:
+    """
+    A fixture that provides a pre-authenticated page object by loading
+    the saved authentication state
+
+    It creates a new browser context for isolation.
+    """
+    auth_file = config.AUTH_STATE_PATH
+    if not os.path.exists(auth_file):
+        pytest.fail(
+            f"Authentication state file not found at '{auth_file}'. "
+            "Please run 'python -m utilities.create_auth_state' to generate it."
+        )
+
+    context = browser.new_context(storage_state=auth_file)
+    page = context.new_page()
+
+    # Go to the account page, which is a sensible default for logged-in tests.
+    page.goto(f"{config.BASE_URL}{config.ACCOUNT_PAGE_PATH}")
+
+    # A quick check to ensure the page is in the expected state.
+    expect(page).to_have_url(f"{config.BASE_URL}{config.ACCOUNT_PAGE_PATH}", timeout=10000)
+
+    yield page
+
+    # Clean up the context to ensure no state leaks between tests.
+    context.close()

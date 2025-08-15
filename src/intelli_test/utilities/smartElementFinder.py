@@ -3,7 +3,8 @@ import os
 import logging
 from playwright.sync_api import Page, Locator, TimeoutError
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Correctly determine the project root, which is three levels up from this file's directory.
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 FINGERPRINTS_FOLDER = os.path.join(PROJECT_ROOT, 'elements')
 
 logger = logging.getLogger(__name__)
@@ -39,9 +40,13 @@ def find_element_smart(page: Page, elements_category: str, element_key: str) -> 
     """
     FINGERPRINTS = _load_fingerprints(elements_category)
     try:
-        fingerprint = FINGERPRINTS[element_key]
+        # The fingerprint file now has a root 'elements' key.
+        elements = FINGERPRINTS.get("elements", {})
+        if not elements:
+            raise KeyError(f"No 'elements' found in fingerprint file for '{elements_category}'. The file might be malformed.")
+        fingerprint = elements[element_key]
     except KeyError as e:
-        error_msg = f"Element key '{element_key}' not found in category '{elements_category}'."
+        error_msg = f"Element key '{element_key}' not found within the 'elements' of category '{elements_category}'."
         logger.error(error_msg)
         raise KeyError(error_msg) from e
 
