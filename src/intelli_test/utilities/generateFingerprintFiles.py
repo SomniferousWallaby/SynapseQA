@@ -6,9 +6,7 @@ from playwright.sync_api import sync_playwright, Page
 
 from . import config, htmlSimplifier
 
-# --- Configuration ---
-# Set up logging to see the script's progress and any potential issues.
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Logging is configured at the application entry point (e.g., in api.py or conftest.py).
 logger = logging.getLogger(__name__)
 
 # Configure the generative AI model
@@ -84,8 +82,23 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
         cleaned_text = raw_text.strip().removeprefix("```json").removesuffix("```").strip()
         logger.info("Successfully received and cleaned AI response.")
 
-        # Parse the cleaned JSON string.
-        locators = json.loads(cleaned_text)
+        parsed_json = json.loads(cleaned_text)
+
+        # The AI sometimes wraps the response object in a list.
+        # If it's a list with one dictionary inside, we can safely extract it.
+        if isinstance(parsed_json, list) and len(parsed_json) == 1 and isinstance(parsed_json[0], dict):
+            logger.warning("AI returned a list containing a single dictionary. Extracting the dictionary.")
+            locators = parsed_json[0]
+        elif isinstance(parsed_json, dict):
+            locators = parsed_json
+        else:
+            # If it's neither a dictionary nor a list with one dictionary, then it's an invalid format.
+            error_msg = (
+                f"AI response was not in the expected format (a JSON object), but was type {type(parsed_json)}. "
+                "The generated fingerprint file will not be saved. Please try again."
+            )
+            logger.error(error_msg)
+            raise TypeError(error_msg)
 
         # Structure the final JSON to include the URL and the element locators.
         data_to_save = {
@@ -105,9 +118,10 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
         logger.error(f"An unexpected error occurred during AI query or file saving: {e}")
 
 
-def generate_fingerprint_file(page: Page, target_url: str, output_file: str, auth_file_path: str | None = None):
+def generate_fingerprint_file(target_url: str, output_file: str, auth_file_path: str | None = None):
     """
     Generate fingerprint file for a specified page, optionally using saved authentication state.
+    This function manages its own Playwright instance.
     """
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)

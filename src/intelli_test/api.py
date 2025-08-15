@@ -69,7 +69,7 @@ def run_fingerprint_generation(url: str, output_filename: str, use_authenticatio
     output_path = f"elements/{output_filename}.json"
 
     try:
-        generateFingerprintFiles.generate_fingerprint_file(None, url, output_path, auth_file_path=auth_path)
+        generateFingerprintFiles.generate_fingerprint_file(url, output_path, auth_file_path=auth_path)
         logger.info(f"Background task finished for fingerprinting: {url}")
     except Exception as e:
         logger.error(f"Error during background fingerprint generation for {url}: {e}", exc_info=True)

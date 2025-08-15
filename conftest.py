@@ -1,9 +1,10 @@
 import os
 import pytest
+import logging
 from playwright.sync_api import Page, expect
 from intelli_test.utilities import config, smartElementFinder
 
-def pytest_configure(pytest_config):
+def pytest_configure(config):
     """
     Configures logging for the entire test suite run.
     This hook runs once before any tests are collected.
@@ -26,7 +27,7 @@ def pytest_configure(pytest_config):
     # Add a file handler to log to a file.
     file_handler = logging.FileHandler(
         filename=os.path.join(logs_folder, 'test_run.log'),
-        filemode='w'
+        mode='w'
     )
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)

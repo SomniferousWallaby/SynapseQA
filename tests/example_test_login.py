@@ -1,7 +1,7 @@
 import logging
 import pytest
 from playwright.sync_api import Page, expect
-from utilities import imageComparison, smartElementFinder, config
+from intelli_test.utilities import imageComparison, smartElementFinder, config
 
 # --- Logger Setup ---
 logger = logging.getLogger(__name__)

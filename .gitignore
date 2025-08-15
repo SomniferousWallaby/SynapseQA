@@ -2,6 +2,7 @@
 elements/
 images/
 logs/
+tests/test_*
 
 # --- Environment & Secrets ---
 .venv

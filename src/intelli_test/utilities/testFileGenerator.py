@@ -31,6 +31,8 @@ def build_test_file_prompt(description: str, fingerprint_filename: str | None = 
     navigation_instruction = f"5.  Use `{fixture_name}.goto()` for navigation. For example: `{fixture_name}.goto(f\"{{config.BASE_URL}}{{config.LOGIN_PAGE_PATH}}\")`."
     page_object_context = ""
     page_object_name = "the relevant page"
+    # This will be updated if a fingerprint is provided, making the prompt more specific.
+    smart_finder_page_object_arg = "'page_object_name'" 
 
     # If a specific fingerprint file is provided, use its content to build a precise prompt.
     if fingerprint_filename:
@@ -71,7 +73,7 @@ You are an expert Python test automation engineer specializing in Playwright and
 
 **Instructions:**
 1.  The output must be a single block of raw Python code. Do not include any explanations or markdown formatting like ```python.
-2.  The test file must include these imports: `pytest`, `logging`, `from playwright.sync_api import Page, expect`, and `from utilities import smartElementFinder, config`.
+2.  The test file must include these imports: `pytest`, `logging`, `from playwright.sync_api import Page, expect`, and `from intelli_test.utilities import smartElementFinder, config`.
 3.  Define a single test function that starts with `test_`. The function name should be descriptive and in snake_case.
 {login_instructions}
 {navigation_instruction}

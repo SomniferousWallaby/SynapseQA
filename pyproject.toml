@@ -14,6 +14,7 @@ dependencies = [
     "python-dotenv",
     "playwright",
     "pytest",
+    "pytest-playwright",
     "google-generativeai",
     "scikit-image",
     "opencv-python",
@@ -22,3 +23,6 @@ dependencies = [
 
 [project.scripts]
 create-auth-state = "intelli_test.utilities.create_auth_state:main_sync"
+
+[tool.setuptools.packages.find]
+where = ["src"]
