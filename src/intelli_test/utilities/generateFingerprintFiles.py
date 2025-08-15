@@ -118,7 +118,7 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
         logger.error(f"An unexpected error occurred during AI query or file saving: {e}")
 
 
-def generate_fingerprint_file(target_url: str, output_file: str, auth_file_path: str | None = None):
+def generate_fingerprint_file(target_url: str, output_file: str, use_authentication: bool = False, allow_redirects: bool = False):
     """
     Generate fingerprint file for a specified page, optionally using saved authentication state.
     This function manages its own Playwright instance.
@@ -128,15 +128,37 @@ def generate_fingerprint_file(target_url: str, output_file: str, auth_file_path:
 
         # Use authentication state if provided to create a pre-authenticated context.
         context_options = {}
-        if auth_file_path and os.path.exists(auth_file_path):
-            context_options['storage_state'] = auth_file_path
-            logger.info(f"Loading authentication state from: {auth_file_path}")
+
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..','..'))
+        auth_path = os.path.join(project_root, 'auth_state.json')
+
+        if use_authentication and os.path.exists(auth_path):
+            context_options['storage_state'] = auth_path
+            logger.info(f"Loading authentication state from: {auth_path}")
+        elif use_authentication and not os.path.exists(auth_path):
+            raise RuntimeError(f"Authentication requested, but auth file not found at: {auth_path}")
+        else:
+            logger.warning("No authentication state provided or file not found. Proceeding without authentication.")
         
         context = browser.new_context(**context_options)
         page = context.new_page()
         
         logger.info(f"Navigating to {target_url}...")
         page.goto(target_url)
+        page.wait_for_load_state('networkidle')
+
+        # Verify that we landed on the correct page and were not redirected.
+        if target_url != page.url and not allow_redirects:
+            error_msg = (
+                f"Fingerprint generation failed. Navigated to '{target_url}' but was redirected to'{page.url}'. "
+                "Your 'auth_state.json' may be expired or invalid. "
+                "Please regenerate it by running 'python -m utilities.create_auth_state'."
+            )
+            logger.error(error_msg)
+            browser.close()
+            raise RuntimeError(error_msg)
+        elif allow_redirects and target_url != page.url:
+            logger.info(f"Allowing redirects. Navigated to '{target_url}' but was redirected to'{page.url}'.")
         
         generate_locators_for_page(page, output_file, target_url)
         

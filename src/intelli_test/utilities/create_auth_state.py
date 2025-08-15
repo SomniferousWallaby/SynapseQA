@@ -1,9 +1,10 @@
 import os
 import asyncio
+import argparse
 from playwright.async_api import async_playwright
 from . import config
 
-async def main():
+async def main(url: str = config.BASE_URL, login_path: str = config.LOGIN_PAGE_PATH):
     """
 
     Launches a browser, allows the user to log in manually,
@@ -20,7 +21,7 @@ async def main():
         context = await browser.new_context()
         page = await context.new_page()
 
-        login_url = f"{config.BASE_URL}{config.LOGIN_PAGE_PATH}"
+        login_url = f"{url}{login_path}"
         print(f"Navigating to login page: {login_url}")
         await page.goto(login_url)
 
@@ -33,13 +34,25 @@ async def main():
         print(f"Saving authentication state to {config.AUTH_STATE_PATH}...")
         await context.storage_state(path=config.AUTH_STATE_PATH)
         
-        print("Authentication state saved successfully. You can now close the browser.")
+        print(f"Authentication state saved to {config.AUTH_STATE_PATH}. You can now close the browser.")
         await browser.close()
 
-def main_sync():
+def main_sync(url: str = config.BASE_URL, login_path: str = config.LOGIN_PAGE_PATH):
     """Synchronous wrapper to be used as a script entry point."""
-    asyncio.run(main())
+    asyncio.run(main(url, login_path))
 
 if __name__ == "__main__":
-    main_sync()
-
+    parser = argparse.ArgumentParser(description="Create a Playwright authentication state file.")
+    parser.add_argument(
+        "--url",
+        default=config.BASE_URL,
+        help=f"The base URL of the site. Defaults to the value in your .env file: {config.BASE_URL}"
+    )
+    parser.add_argument(
+        "--login-path",
+        dest="login_path",
+        default=config.LOGIN_PAGE_PATH,
+        help=f"The path to the login page. Defaults to the value in your .env file: {config.LOGIN_PAGE_PATH}"
+    )
+    args = parser.parse_args()
+    main_sync(url=args.url, login_path=args.login_path)

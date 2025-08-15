@@ -33,6 +33,7 @@ dist/
 
 # --- Authentication State ---
 auth_state.json
+auth_creation_settings.json
 
 # --- Frontend Artifacts (Node.js / Vite) ---
 /frontend/node_modules/

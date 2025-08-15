@@ -16,24 +16,39 @@ function formatTimeAgo(isoString) {
     const hours = Math.round(minutes / 60);
     const days = Math.round(hours / 24);
 
-    if (seconds < 60) return `${seconds} seconds ago`;
-    if (minutes < 60) return `${minutes} minutes ago`;
-    if (hours < 24) return `${hours} hours ago`;
-    return `${days} days ago`;
+    if (seconds < 60) return `${seconds} second${seconds === 1 ? '' : 's'} ago`;
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function formatTimeUntil(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const seconds = Math.round((date - now) / 1000);
+    const minutes = Math.round(seconds / 60);
+    const hours = Math.round(minutes / 60);
+    const days = Math.round(hours / 24);
+
+    if (seconds < 0) return 'already'; // Should be caught by is_expired, but a good fallback.
+    if (seconds < 60) return `in ${seconds} second${seconds === 1 ? '' : 's'}`;
+    if (minutes < 60) return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
+    if (hours < 24) return `in ${hours} hour${hours === 1 ? '' : 's'}`;
+    return `in ${days} day${days === 1 ? '' : 's'}`;
 }
 
 function getAuthStateStatus(authState) {
-    if (!authState.exists) {
-        return 'error';
+    if (!authState.exists) { // Not found - yellow
+        return 'error'; 
     }
-    const authDate = new Date(authState.last_modified);
-    const now = new Date();
-    const ageInHours = (now - authDate) / (1000 * 60 * 60);
-
-    if (ageInHours > 24) {
+    if (authState.is_expired) { // Expired - red
+        return 'error'; 
+    }
+    if (!authState.expires_at) { // Exists, not expired, but expiration date is unknown - yellow
         return 'warning';
     }
-    return 'success';
+    return 'success'; // Present and valid
 }
 
 function Dashboard() {
@@ -46,7 +61,14 @@ function Dashboard() {
     // Modal, form, and notification states
     const [isFingerprintModalOpen, setIsFingerprintModalOpen] = useState(false);
     const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+    const [isAutoAuthModalOpen, setIsAutoAuthModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [autoAuthForm, setAutoAuthForm] = useState({
+        login_url: '',
+        login_instructions: '',
+        fingerprint_filename: '',
+        headless: true,
+    });
     const [toasts, setToasts] = useState([]);
 
     const fetchData = async () => {
@@ -94,11 +116,15 @@ function Dashboard() {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
     };
 
-    const addToast = (message, type = 'info', duration = 5000) => {
+    const addToast = (message, type = 'info', duration) => {
         const id = Date.now() + Math.random();
         setToasts(prevToasts => [...prevToasts, { id, message, type }]);
-        if (duration !== null) {
-            setTimeout(() => removeToast(id), duration);
+
+        // Default duration is 5s, but errors are persistent by default so they aren't missed.
+        const finalDuration = duration !== undefined ? duration : (type === 'error' ? null : 5000);
+
+        if (finalDuration !== null) {
+            setTimeout(() => removeToast(id), finalDuration);
         }
         return id;
     };
@@ -122,8 +148,6 @@ function Dashboard() {
             const result = await response.json();
             
             if (!response.ok) throw new Error(result.detail || 'An unknown error occurred.');
-
-            addToast(result.message, 'info'); // Let the user know the task has been queued
 
             // 2. Poll for the result, as the task runs in the background
             const pollForFile = (fileName, fileType, timeout = 30000, interval = 2000) => {
@@ -188,10 +212,11 @@ function Dashboard() {
             url: formData.get('url'),
             output_filename: formData.get('output_filename'),
             use_authentication: formData.get('use_authentication') === 'on',
+            allow_redirects: formData.get('allow_redirects') === 'on',
         };
 
         console.log('Form data:', body);
-        const success = await handleApiSubmit('/fingerprint', body, 'Fingerprint generation has been queued successfully');
+        const success = await handleApiSubmit('/fingerprint', body);
         console.log('handleApiSubmit result:', success);
         
         if (success) {
@@ -215,6 +240,86 @@ function Dashboard() {
         }
     };
 
+    const handleAutoAuthSubmit = async (event) => {
+        event.preventDefault();
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        const startId = addToast('Starting automated auth state creation...', 'info', null);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth_state/automated`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(autoAuthForm),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail || 'An unknown error occurred.');
+
+            const pollForAuthFile = (timeout = 12010, interval = 3000) => {
+                return new Promise((resolve, reject) => {
+                    const startTime = Date.now();
+                    const initialTimestamp = authState.last_modified;
+
+                    const intervalId = setInterval(async () => {
+                        if (Date.now() - startTime > timeout) {
+                            clearInterval(intervalId);
+                            reject(new Error(`Polling for auth state update timed out after ${timeout / 1000}s.`));
+                            return;
+                        }
+                        try {
+                            const authResponse = await fetch(`${API_BASE_URL}/files/auth-state`);
+                            if (!authResponse.ok) return;
+                            const newAuthState = await authResponse.json();
+                            if (newAuthState.exists && newAuthState.last_modified !== initialTimestamp) {
+                                clearInterval(intervalId);
+                                await fetchData();
+                                resolve();
+                            }
+                        } catch (err) { /* Silently ignore polling errors and retry */ }
+                    }, interval);
+                });
+            };
+            await pollForAuthFile();
+            removeToast(startId);
+            addToast('Successfully created new auth state!', 'success');
+            setIsAutoAuthModalOpen(false);
+        } catch (error) {
+            removeToast(startId);
+            addToast(error.message, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const openAutoAuthModal = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth_state/automated/settings`);
+            if (response.ok) {
+                const settings = await response.json();
+                // Ensure all fields have a default value to avoid uncontrolled component warnings
+                setAutoAuthForm({
+                    login_url: settings.login_url || '',
+                    login_instructions: settings.login_instructions || '',
+                    fingerprint_filename: settings.fingerprint_filename || '',
+                    headless: settings.headless !== undefined ? settings.headless : true,
+                });
+            } else {
+                // If settings don't exist or there's an error, use empty defaults
+                setAutoAuthForm({ login_url: '', login_instructions: '', fingerprint_filename: '', headless: true });
+            }
+        } catch (error) {
+            console.error("Failed to fetch auth settings:", error);
+            addToast("Could not load previous auth settings.", "error");
+        }
+        setIsAutoAuthModalOpen(true);
+    };
+
+    const handleAutoAuthFormChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setAutoAuthForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -235,10 +340,16 @@ function Dashboard() {
             <div className="status-container">
                 <div className={`status-box ${getAuthStateStatus(authState)}`}>
                     <strong>Auth State:</strong>
-                    {authState.exists
-                        ? ` Present (Updated ${formatTimeAgo(authState.last_modified)})`
-                        : ' Not Found'}
+                    {(() => {
+                        if (!authState.exists) return ' Not Found';
+                        const lastUpdated = `(Updated ${formatTimeAgo(authState.last_modified)})`;
+                        if (authState.is_expired) return ` Expired ${lastUpdated}`;
+                        if (!authState.expires_at) return ` Present, expiration unknown ${lastUpdated}`;
+                        const expires = `(Expires ${formatTimeUntil(authState.expires_at)})`;
+                        return ` Valid ${expires}`;
+                    })()}
                 </div>
+                <button className="create-btn auth-btn" onClick={openAutoAuthModal}>Set Auth State</button>
             </div>
 
             <div className="panels-container">
@@ -290,8 +401,62 @@ function Dashboard() {
                         <label htmlFor="use_authentication">Use Authenticated Session</label>
                     </div>
 
+                    <div className="checkbox-group">
+                        <input type="checkbox" id="allow_redirects" name="allow_redirects" />
+                        <label htmlFor="allow_redirects">Allow Redirects</label>
+                    </div>
+
                     <button type="submit" className="submit-btn" disabled={isSubmitting}>
                         {isSubmitting ? 'Generating...' : 'Generate Fingerprint'}
+                    </button>
+                </form>
+            </Modal>
+
+            <Modal isOpen={isAutoAuthModalOpen} onClose={() => setIsAutoAuthModalOpen(false)} title="Create Auth State">
+                <form onSubmit={handleAutoAuthSubmit} className="modal-form">
+                    <label htmlFor="login_url">Login Page URL</label>
+                    <input 
+                        type="url" 
+                        id="login_url" 
+                        name="login_url" 
+                        placeholder="https://example.com/login" 
+                        value={autoAuthForm.login_url}
+                        onChange={handleAutoAuthFormChange}
+                        required 
+                    />
+
+                    <label htmlFor="login_instructions">Login Instructions</label>
+                    <textarea 
+                        id="login_instructions" 
+                        name="login_instructions" 
+                        rows="3" 
+                        placeholder="Describe the login process in plain english." 
+                        value={autoAuthForm.login_instructions}
+                        onChange={handleAutoAuthFormChange}
+                        required
+                    ></textarea>    
+                    
+                    <label htmlFor="fingerprint_filename">Fingerprint File (Optional)</label>
+                    <select id="fingerprint_filename" name="fingerprint_filename" value={autoAuthForm.fingerprint_filename} onChange={handleAutoAuthFormChange}>
+                        <option value="">None</option>
+                        {fingerprints.map(fp => (
+                            <option key={fp} value={fp}>{fp}</option>
+                        ))}
+                    </select>
+
+                    <div className="checkbox-group">
+                        <input
+                            type="checkbox"
+                            id="headless"
+                            name="headless"
+                            checked={autoAuthForm.headless}
+                            onChange={handleAutoAuthFormChange}
+                        />
+                        <label htmlFor="headless">Run in Headless Mode</label>
+                    </div>
+
+                    <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                        {isSubmitting ? 'Generating...' : 'Generate Auth State'}
                     </button>
                 </form>
             </Modal>
@@ -314,7 +479,7 @@ function Dashboard() {
 
                     <div className="checkbox-group">
                         <input type="checkbox" id="requires_login" name="requires_login" />
-                        <label htmlFor="requires_login">Requires Login (uses logged_in_page fixture)</label>
+                        <label htmlFor="requires_login">Requires Login (uses Auth State for logging in)</label>
                     </div>
 
                     <button type="submit" className="submit-btn" disabled={isSubmitting}>

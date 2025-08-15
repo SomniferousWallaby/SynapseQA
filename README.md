@@ -29,15 +29,22 @@ The project is built around a simple and powerful architecture:
     cp .env.example .env
     ```
 
-5.  **Create Authentication State (Optional):**
-    If you need to test pages behind a login, run this one-time script. It will open a browser, allow you to log in manually, and save your session to an `auth_state.json` file.
+5.  **Make Scripts Executable (Optional, but Recommended):**
     ```bash
-    python -m utilities.create_auth_state
+    chmod +x start_dev.sh
     ```
 
-6.  **Run the API Server:**
+6.  **Manually Create Authentication State (Optional):**
+    If you need to test pages behind a login, run this one-time script. It will open a browser, allow you to log in manually, and save your session to an `auth_state.json` file.
     ```bash
-    uvicorn main:app --reload
+    python -m src.intelli_test.utilities.create_auth_state
+    ```
+    The Authentication State can also be generated with the web application.
+
+7.  **Run the Development Server:**
+    Use the provided development script to start both the frontend and backend servers. This script also handles port cleanup to prevent "Address already in use" errors.
+    ```bash
+    ./start_dev.sh
     ```
     You can now access the interactive API documentation at `http://127.0.0.1:8000/docs`.
 
@@ -80,6 +87,3 @@ Generates a complete Python test file from a natural language description.
     }
     ```
 *   **Action**: Triggers a background task to create `tests/test_verify_profile_name.py` using the `logged_in_page` fixture and locators from `accountPage.json`.
-
-
-

@@ -2,7 +2,7 @@ import google.generativeai as genai
 import json
 import logging
 from playwright.sync_api import Page
-from utilities import htmlSimplifier, config
+from intelli_test.utilities import htmlSimplifier, config
 
 logger = logging.getLogger(__name__)
 genai.configure(api_key=config.API_KEY)

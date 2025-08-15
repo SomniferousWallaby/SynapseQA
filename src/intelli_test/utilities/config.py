@@ -14,6 +14,7 @@ def get_required_env(var_name: str) -> str:
 # Correctly determine the project root, which is three levels up from this file's directory.
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 AUTH_STATE_PATH = os.path.join(PROJECT_ROOT, "auth_state.json")
+AUTH_SETTINGS_PATH = os.path.join(PROJECT_ROOT, "auth_creation_settings.json")
 
 # --- Centralized Configuration Values ---
 API_KEY = get_required_env("GENAI_API_KEY")
