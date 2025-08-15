@@ -103,32 +103,68 @@ function Dashboard() {
         return id;
     };
     
-    const handleApiSubmit = async (endpoint, body, successMessage) => {
+    const handleApiSubmit = async (endpoint, body) => {
         setIsSubmitting(true);
         
         const startMessage = endpoint.includes('fingerprint') 
             ? 'Starting fingerprint generation...' 
             : 'Starting test generation...';
         
-        const startId = addToast(startMessage, 'info', null);
+        const startId = addToast(startMessage, 'info', null); // Keep this toast until the process is complete
         
         try {
+            // 1. Trigger the background task on the server
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
             const result = await response.json();
-            console.log('API Response:', result);
             
             if (!response.ok) throw new Error(result.detail || 'An unknown error occurred.');
 
+            addToast(result.message, 'info'); // Let the user know the task has been queued
+
+            // 2. Poll for the result, as the task runs in the background
+            const pollForFile = (fileName, fileType, timeout = 30000, interval = 2000) => {
+                return new Promise((resolve, reject) => {
+                    const startTime = Date.now();
+
+                    const intervalId = setInterval(async () => {
+                        if (Date.now() - startTime > timeout) {
+                            clearInterval(intervalId);
+                            reject(new Error(`Polling for '${fileName}' timed out after ${timeout / 1000}s.`));
+                            return;
+                        }
+
+                        try {
+                            const listUrl = fileType === 'test' ? '/files/tests' : '/files/fingerprints';
+                            const listResponse = await fetch(`${API_BASE_URL}${listUrl}`);
+                            if (!listResponse.ok) return; // Silently fail and retry on next interval
+
+                            const fileList = await listResponse.json();
+
+                            if (fileList.includes(fileName)) {
+                                clearInterval(intervalId);
+                                await fetchData(); // Run a final full data fetch to update everything
+                                resolve();
+                            }
+                        } catch (err) {
+                            console.warn("Polling fetch failed, will retry:", err);
+                        }
+                    }, interval);
+                });
+            };
+
+            const targetFileName = endpoint.includes('fingerprint') ? `${body.output_filename}.json` : body.file_name;
+            const fileType = endpoint.includes('fingerprint') ? 'fingerprint' : 'test';
+
+            await pollForFile(targetFileName, fileType);
+
+            // 3. Finalize and update UI
             removeToast(startId);
-            addToast(result.message, 'success');
-            
-            // Fetch data before returning
-            await fetchData();
-            return true;
+            addToast(`Successfully generated ${targetFileName}`, 'success');
+            return true; // Indicate success to the calling function
         } catch (error) {
             removeToast(startId);
             addToast(error.message, 'error');
@@ -155,7 +191,7 @@ function Dashboard() {
         };
 
         console.log('Form data:', body);
-        const success = await handleApiSubmit('/fingerprint', body);
+        const success = await handleApiSubmit('/fingerprint', body, 'Fingerprint generation has been queued successfully');
         console.log('handleApiSubmit result:', success);
         
         if (success) {
@@ -173,11 +209,7 @@ function Dashboard() {
             requires_login: formData.get('requires_login') === 'on',
         };
 
-        const success = await handleApiSubmit(
-            '/generate-test', 
-            body, 
-            'Test file generation has been queued successfully'
-        );
+        const success = await handleApiSubmit('/generate-test', body);
         if (success) {
             setIsTestModalOpen(false);
         }
