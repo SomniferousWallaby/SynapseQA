@@ -58,7 +58,7 @@ def build_locator_prompt(simplified_html: str) -> str:
     """
 
 
-def generate_locators_for_page(page: Page, output_path: str):
+def generate_locators_for_page(page: Page, output_path: str, target_url: str):
     """
     Orchestrates the process: simplifies HTML, queries the AI, and saves the result.
     """
@@ -87,9 +87,14 @@ def generate_locators_for_page(page: Page, output_path: str):
         # Parse the cleaned JSON string.
         locators = json.loads(cleaned_text)
 
+        # Structure the final JSON to include the URL and the element locators.
+        data_to_save = {
+            "url": target_url,
+            "elements": locators
+        }
         # Save the generated locators to the specified file.
         with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(locators, f, indent=2)
+            json.dump(data_to_save, f, indent=2)
         
         logger.info(f"Successfully saved locators to {output_path}")
 
@@ -119,6 +124,6 @@ def generate_fingerprint_file(page: Page, target_url: str, output_file: str, aut
         logger.info(f"Navigating to {target_url}...")
         page.goto(target_url)
         
-        generate_locators_for_page(page, output_file)
+        generate_locators_for_page(page, output_file, target_url)
         
         browser.close()

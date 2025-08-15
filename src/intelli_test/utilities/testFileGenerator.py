@@ -28,6 +28,7 @@ def build_test_file_prompt(description: str, fingerprint_filename: str | None = 
     else:
         login_instructions = f"""4.  The test function must accept the `{fixture_name}: Page` and `request: pytest.FixtureRequest` fixtures."""
 
+    navigation_instruction = f"5.  Use `{fixture_name}.goto()` for navigation. For example: `{fixture_name}.goto(f\"{{config.BASE_URL}}{{config.LOGIN_PAGE_PATH}}\")`."
     page_object_context = ""
     page_object_name = "the relevant page"
 
@@ -38,7 +39,15 @@ def build_test_file_prompt(description: str, fingerprint_filename: str | None = 
             with open(fingerprint_path, 'r', encoding='utf-8') as f:
                 elements_json = json.load(f)
             
-            elements_str = json.dumps(elements_json, indent=2)
+            page_url = elements_json.get("url")
+            elements = elements_json.get("elements", {})
+
+            if page_url:
+                # If a URL is found in the fingerprint, create a direct navigation instruction.
+                navigation_instruction = f"5.  The test MUST begin by navigating to the page's specific URL. Use `{fixture_name}.goto('{page_url}')`."
+
+            
+            elements_str = json.dumps(elements, indent=2)
             page_object_name = fingerprint_filename.removesuffix('.json')
 
             page_object_context = f"""
@@ -61,11 +70,11 @@ def build_test_file_prompt(description: str, fingerprint_filename: str | None = 
 You are an expert Python test automation engineer specializing in Playwright and pytest. Your task is to write a complete Python test file based on a user's description.
 
 **Instructions:**
-1.  The output must be a single block of raw Python code. Do not include any explanations, comments, or markdown formatting like ```python.
-2.  The test file must include these imports: `pytest`, `logging`, `from playwright.sync_api import Page, expect`, and `from ../src/intelli_test/utilities import smartElementFinder, config`.
+1.  The output must be a single block of raw Python code. Do not include any explanations or markdown formatting like ```python.
+2.  The test file must include these imports: `pytest`, `logging`, `from playwright.sync_api import Page, expect`, and `from utilities import smartElementFinder, config`.
 3.  Define a single test function that starts with `test_`. The function name should be descriptive and in snake_case.
 {login_instructions}
-5.  Use `{fixture_name}.goto()` for navigation. For example: `{fixture_name}.goto(f"{{config.BASE_URL}}{{config.LOGIN_PAGE_PATH}}")`.
+{navigation_instruction}
 6.  **Crucially, you MUST use `smartElementFinder.find_element_smart({fixture_name}, 'page_object_name', 'element_key')` to locate ALL elements.**
     {page_object_context}
 7.  Use `expect()` from Playwright for all assertions. For example: `expect(locator).to_be_visible()` or `expect({fixture_name}).to_have_url(...)`.
