@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from pydantic import BaseModel
 from playwright.sync_api import sync_playwright
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 from fastapi.staticfiles import StaticFiles
 
 from .utilities import generateFingerprintFiles
@@ -161,6 +162,23 @@ async def list_test_files():
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/files/auth-state")
+async def get_auth_state_status():
+    """Checks for the existence and modification time of the auth_state.json file."""
+    # Construct the path relative to the reliable project_root to avoid CWD issues.
+    auth_path = os.path.join(project_root, 'auth_state.json')
+    if os.path.exists(auth_path):
+        try:
+            last_modified_timestamp = os.path.getmtime(auth_path)
+            last_modified_iso = datetime.fromtimestamp(last_modified_timestamp).isoformat()
+            return {"exists": True, "last_modified": last_modified_iso}
+        except Exception as e:
+            logger.error(f"Could not read auth file metadata from '{auth_path}': {e}")
+            raise HTTPException(status_code=500, detail="Could not read auth file metadata.")
+    else:
+        logger.warning(f"Auth state file not found at '{auth_path}'.")
+        return {"exists": False, "last_modified": None}
 
 @app.get("/")
 def read_root():

@@ -4,6 +4,8 @@ import os
 from . import config
 import json
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
 # Configure the generative AI model
 genai.configure(api_key=config.API_KEY)
 model = genai.GenerativeModel(model_name=config.MODEL_NAME)
@@ -11,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def get_available_page_objects():
     """Scans the elements directory to find available page object models."""
-    elements_dir = os.path.join(config.PROJECT_ROOT, 'elements')
+    elements_dir = os.path.join(PROJECT_ROOT, 'elements')
     if not os.path.isdir(elements_dir):
         return []
     return [f.removesuffix('.json') for f in os.listdir(elements_dir) if f.endswith('.json')]
@@ -31,7 +33,7 @@ def build_test_file_prompt(description: str, fingerprint_filename: str | None = 
 
     # If a specific fingerprint file is provided, use its content to build a precise prompt.
     if fingerprint_filename:
-        fingerprint_path = os.path.join(config.PROJECT_ROOT, 'elements', fingerprint_filename)
+        fingerprint_path = os.path.join(PROJECT_ROOT, 'elements', fingerprint_filename)
         try:
             with open(fingerprint_path, 'r', encoding='utf-8') as f:
                 elements_json = json.load(f)
@@ -60,7 +62,7 @@ You are an expert Python test automation engineer specializing in Playwright and
 
 **Instructions:**
 1.  The output must be a single block of raw Python code. Do not include any explanations, comments, or markdown formatting like ```python.
-2.  The test file must include these imports: `pytest`, `logging`, `from playwright.sync_api import Page, expect`, and `from utilities import smartElementFinder, config`.
+2.  The test file must include these imports: `pytest`, `logging`, `from playwright.sync_api import Page, expect`, and `from ../src/intelli_test/utilities import smartElementFinder, config`.
 3.  Define a single test function that starts with `test_`. The function name should be descriptive and in snake_case.
 {login_instructions}
 5.  Use `{fixture_name}.goto()` for navigation. For example: `{fixture_name}.goto(f"{{config.BASE_URL}}{{config.LOGIN_PAGE_PATH}}")`.
@@ -95,7 +97,12 @@ def generate_test_file(description: str, file_name: str, fingerprint_filename: s
         if not generated_code.startswith("import"):
             raise ValueError("Generated response does not appear to be valid Python code.")
 
-        output_path = os.path.join(config.PROJECT_ROOT, 'tests', file_name)
+        output_path = os.path.join(PROJECT_ROOT, 'tests', file_name)
+        
+        # Ensure the output directory exists before writing the file.
+        output_dir = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
+
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(generated_code)
         
