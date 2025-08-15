@@ -138,6 +138,7 @@
 }
 
 .modal-form input[type="text"],
+.modal-form input[type="password"],
 .modal-form input[type="url"],
 .modal-form textarea,
 .modal-form select {
@@ -146,6 +147,8 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1rem;
+    box-sizing: border-box;
+    margin-bottom: 1rem;
 }
 
 .checkbox-group {

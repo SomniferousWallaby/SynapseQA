@@ -28,13 +28,21 @@ def perform_login(page: Page):
     logger.info("Dynamic login script finished.")
 """
 
-def build_login_script_prompt(login_url: str, login_instructions: str, fingerprint_json: dict | None = None) -> str:
+def build_login_script_prompt(login_url: str, login_instructions: str, fingerprint_json: dict | None = None, username: str | None = None, password: str | None = None) -> str:
     """Constructs the prompt for generating a Playwright login script."""
     
     elements = {}
     if fingerprint_json:
         elements = fingerprint_json.get("elements", {})
     elements_str = json.dumps(elements, indent=2)
+    
+    if username and password:
+        # Escape quotes in username/password to be safe inside the f-string prompt
+        safe_username = username.replace('"', '\\"')
+        safe_password = password.replace('"', '\\"')
+        credentials_instruction = f'4.  **Credentials:** Use the literal string `"{safe_username}"` for the username and `"{safe_password}"` for the password.'
+    else:
+        credentials_instruction = '4.  **Credentials:** Use `config.TEST_USER` and `config.PASSWORD` for the username and password. The `config` object is already imported and available to your code.'
     
     return f"""
 You are an expert Python test automation engineer specializing in Playwright. Your task is to write the body of a Python function that logs into a website.
@@ -43,7 +51,7 @@ You are an expert Python test automation engineer specializing in Playwright. Yo
 1.  **Code Only:** The output must be ONLY the Python code for the function body. Do NOT include the function definition `def perform_login(page: Page):`, any `import` statements, or any markdown formatting like ```python.
 2.  **No Indentation:** All lines of your generated code must have NO initial indentation. The execution environment will handle indenting the code block correctly.
 3.  **Context:** The code will be executed inside a function that receives a `page: Page` object that has already navigated to the login page.
-4.  **Credentials:** Use `config.TEST_USER` and `config.PASSWORD` for the username and password. The `config` object is already imported and available to your code.
+{credentials_instruction}
 5.  **Locators:** Use the provided element locators to interact with the page. If no locators are provided, use your best judgment for selectors.
 6.  **Wait After Action:** After the login action (e.g., clicking a button), you MUST add a wait condition to ensure the login completes. The best method is to wait for the URL to change to something that is NOT the login page. Use this exact line of code: `page.wait_for_url(lambda url: "{login_url}" not in url, timeout=15000)`.
 
@@ -58,7 +66,7 @@ You are an expert Python test automation engineer specializing in Playwright. Yo
 **Generated Python Code (function body only):**
 """
 
-def create_automated_auth_state(login_url: str, login_instructions: str, fingerprint_filename: str | None = None, headless: bool = True):
+def create_automated_auth_state(login_url: str, login_instructions: str, fingerprint_filename: str | None = None, headless: bool = True, username: str | None = None, password: str | None = None):
     """
     Generates a login script using AI, executes it to log in, and saves the auth state.
     """
@@ -78,7 +86,7 @@ def create_automated_auth_state(login_url: str, login_instructions: str, fingerp
             fingerprint_data = json.load(f)
 
     # 2. Build the prompt and get the script from AI
-    prompt = build_login_script_prompt(login_url, login_instructions, fingerprint_data)
+    prompt = build_login_script_prompt(login_url, login_instructions, fingerprint_data, username=username, password=password)
     
     try:
         logger.info("Sending request to generative AI for login script...")
@@ -98,7 +106,7 @@ def create_automated_auth_state(login_url: str, login_instructions: str, fingerp
         perform_login_func = script_namespace['perform_login']
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=False)
+            browser = p.chromium.launch(headless=headless)
             context = browser.new_context()
             page = context.new_page()
             page.goto(login_url)

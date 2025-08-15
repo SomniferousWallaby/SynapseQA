@@ -121,15 +121,20 @@ class AutomatedAuthStateRequest(BaseModel):
     login_instructions: str
     fingerprint_filename: str | None = None
     headless: bool = True
+    username: str | None = None
+    password: str | None = None
 
-def run_automated_auth_creation(login_url: str, login_instructions: str, fingerprint_filename: str | None = None):
+def run_automated_auth_creation(login_url: str, login_instructions: str, fingerprint_filename: str | None = None, headless: bool = True, username: str | None = None, password: str | None = None):
     """Background task for automated auth state creation."""
     logger.info(f"Background task started for automated auth state creation for: {login_url}")
     try:
         automatedLogin.create_automated_auth_state(
             login_url=login_url,
             login_instructions=login_instructions,
-            fingerprint_filename=fingerprint_filename
+            fingerprint_filename=fingerprint_filename,
+            headless=headless,
+            username=username,
+            password=password
         )
         logger.info(f"Background task finished for automated auth state creation for: {login_url}")
     except Exception as e:
@@ -234,7 +239,10 @@ async def create_automated_auth_state(request: AutomatedAuthStateRequest, backgr
         run_automated_auth_creation,
         request.login_url,
         request.login_instructions,
-        request.fingerprint_filename
+        request.fingerprint_filename,
+        request.headless,
+        request.username,
+        request.password
     )
     return {"message": "Automated authentication state creation has been started in the background."}
 

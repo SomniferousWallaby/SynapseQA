@@ -68,6 +68,8 @@ function Dashboard() {
         login_instructions: '',
         fingerprint_filename: '',
         headless: true,
+        username: '',
+        password: '',
     });
     const [toasts, setToasts] = useState([]);
 
@@ -303,10 +305,12 @@ function Dashboard() {
                     login_instructions: settings.login_instructions || '',
                     fingerprint_filename: settings.fingerprint_filename || '',
                     headless: settings.headless !== undefined ? settings.headless : true,
+                    username: settings.username || '',
+                    password: settings.password || '',
                 });
             } else {
                 // If settings don't exist or there's an error, use empty defaults
-                setAutoAuthForm({ login_url: '', login_instructions: '', fingerprint_filename: '', headless: true });
+                setAutoAuthForm({ login_url: '', login_instructions: '', fingerprint_filename: '', headless: true, username: '', password: '' });
             }
         } catch (error) {
             console.error("Failed to fetch auth settings:", error);
@@ -378,18 +382,7 @@ function Dashboard() {
             </div>
 
                 <Modal isOpen={isFingerprintModalOpen} onClose={() => setIsFingerprintModalOpen(false)} title="Create New Fingerprint">
-                    <form 
-                        onSubmit={(e) => {
-                            e.preventDefault(); // Prevent default here
-                            console.log('Form submit event triggered at:', Date.now());
-                            if (!isSubmitting) { // Extra check here
-                                handleFingerprintSubmit(e);
-                            } else {
-                                console.log('Submission already in progress, ignoring form submit');
-                            }
-                        }} 
-                        className="modal-form"
-                    >
+                    <form onSubmit={handleFingerprintSubmit} className="modal-form">
                     <label htmlFor="url">Target URL</label>
                     <input type="url" id="url" name="url" placeholder="https://example.com/login" required />
 
@@ -435,6 +428,26 @@ function Dashboard() {
                         onChange={handleAutoAuthFormChange}
                         required
                     ></textarea>    
+
+                    <label htmlFor="username">Username (Optional)</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        placeholder="Defaults to TEST_USER in .env" 
+                        value={autoAuthForm.username}
+                        onChange={handleAutoAuthFormChange}
+                    />
+
+                    <label htmlFor="password">Password (Optional)</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Defaults to PASSWORD in .env" 
+                        value={autoAuthForm.password}
+                        onChange={handleAutoAuthFormChange}
+                    />
                     
                     <label htmlFor="fingerprint_filename">Fingerprint File (Optional)</label>
                     <select id="fingerprint_filename" name="fingerprint_filename" value={autoAuthForm.fingerprint_filename} onChange={handleAutoAuthFormChange}>
