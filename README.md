@@ -94,13 +94,13 @@ While the UI is the primary way to interact with `intelliTest`, all functionalit
 
 ## Makefile for Development
 
-For those who prefer using `make`, a `Makefile.mk` is included to streamline common tasks.
+For developers who prefer using `make`, a `Makefile.mk` is included to streamline common tasks.
 
 *   **One-Command Setup**: Install all dependencies (Python, Node.js, and Playwright browsers) and set up the virtual environment.
     ```bash
     make -f Makefile.mk setup-dev
     ```
-*   **Run Tests**: Execute the entire test suite.
+*   **Run the Test Suite**:
     ```bash
     make -f Makefile.mk test
     ```

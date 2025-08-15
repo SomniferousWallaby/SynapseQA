@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import Modal from '../../components/modal/Modal';
 import ToastContainer from '../../components/toast/ToastContainer';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { a11yDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 // Vite exposes environment variables via `import.meta.env`
 // Only variables prefixed with VITE_ are exposed to the client.
@@ -63,6 +65,11 @@ function Dashboard() {
     const [isTestModalOpen, setIsTestModalOpen] = useState(false);
     const [isAutoAuthModalOpen, setIsAutoAuthModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // State for the new file viewer/runner modal
+    const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
+    const [viewerContent, setViewerContent] = useState({ filename: '', content: '', type: '' });
+    const [testResult, setTestResult] = useState(null);
+    const [isViewerLoading, setIsViewerLoading] = useState(false);
     const [autoAuthForm, setAutoAuthForm] = useState({
         login_url: '',
         login_instructions: '',
@@ -324,6 +331,71 @@ function Dashboard() {
         setAutoAuthForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
+    const handleViewFile = async (filename, type) => {
+        setIsViewerLoading(true);
+        setTestResult(null); // Clear previous test results
+        setIsViewerModalOpen(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/files/content?type=${type}&filename=${filename}`);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to fetch file content.');
+            }
+            const data = await response.json();
+            setViewerContent({ filename, content: data.content, type });
+        } catch (error) {
+            addToast(error.message, 'error');
+            setIsViewerModalOpen(false); // Close modal on error
+        } finally {
+            setIsViewerLoading(false);
+        }
+    };
+
+    const handleDeleteFile = async (filename, type) => {
+        if (window.confirm(`Are you sure you want to delete ${filename}? This action cannot be undone.`)) {
+            const startId = addToast(`Deleting ${filename}...`, 'info', null);
+            try {
+                const response = await fetch(`${API_BASE_URL}/files?type=${type}&filename=${filename}`, {
+                    method: 'DELETE',
+                });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to delete file.');
+                }
+                removeToast(startId);
+                addToast(`${filename} deleted successfully.`, 'success');
+                fetchData(); // Refresh the file lists
+            } catch (error) {
+                removeToast(startId);
+                addToast(error.message, 'error');
+            }
+        }
+    };
+
+    const handleRunTest = async (filename) => {
+        setIsViewerLoading(true);
+        setViewerContent({ filename, content: null, type: 'test' }); // Clear previous content
+        setTestResult(null);
+        setIsViewerModalOpen(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/tests/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.detail || 'Failed to run test.');
+            }
+            setTestResult(result);
+        } catch (error) {
+            addToast(error.message, 'error');
+            setIsViewerModalOpen(false);
+        } finally {
+            setIsViewerLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -361,9 +433,22 @@ function Dashboard() {
                     <h2>Available Tests</h2>
                     <button className="create-btn" onClick={() => setIsTestModalOpen(true)}>Create New Test</button>
                     <ul className="file-list">
-                        {tests.length > 0 ? (
-                            tests.map(test => <li key={test}>{test}</li>)
-                        ) : (
+                        {tests.length > 0 ? ( tests.map(test => (
+                            <li key={test} className="file-item">
+                                <span>{test}</span>
+                                <div className="file-actions">
+                                    <button className="action-btn view-btn" title="View File" onClick={() => handleViewFile(test, 'test')}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </button>
+                                    <button className="action-btn run-btn" title="Run Test" onClick={() => handleRunTest(test)}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    </button>
+                                    <button className="action-btn delete-btn" title="Delete File" onClick={() => handleDeleteFile(test, 'test')}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </li>
+                        ))) : (
                             <li>No tests found.</li>
                         )}
                     </ul>
@@ -372,14 +457,26 @@ function Dashboard() {
                     <h2>Available Page Fingerprints</h2>
                     <button className="create-btn" onClick={() => setIsFingerprintModalOpen(true)}>Create New Fingerprint</button>
                     <ul className="file-list">
-                        {fingerprints.length > 0 ? (
-                            fingerprints.map(fp => <li key={fp}>{fp}</li>)
-                        ) : (
+                        {fingerprints.length > 0 ? ( fingerprints.map(fp => (
+                            <li key={fp} className="file-item">
+                                <span>{fp}</span>
+                                <div className="file-actions">
+                                    <button className="action-btn view-btn" title="View File" onClick={() => handleViewFile(fp, 'fingerprint')}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </button>
+                                    <button className="action-btn delete-btn" title="Delete File" onClick={() => handleDeleteFile(fp, 'fingerprint')}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </li>
+                        ))) : (
                             <li>No fingerprints found.</li>
                         )}
                     </ul>
                 </div>
             </div>
+
+            {/* --- Modals --- */}
 
                 <Modal isOpen={isFingerprintModalOpen} onClose={() => setIsFingerprintModalOpen(false)} title="Create New Fingerprint">
                     <form onSubmit={handleFingerprintSubmit} className="modal-form">
@@ -499,6 +596,50 @@ function Dashboard() {
                         {isSubmitting ? 'Generating...' : 'Generate Test'}
                     </button>
                 </form>
+            </Modal>
+
+            <Modal 
+                isOpen={isViewerModalOpen} 
+                onClose={() => setIsViewerModalOpen(false)} 
+                title={testResult ? `Test Results: ${viewerContent.filename}` : `Viewing: ${viewerContent.filename}`}
+                isLarge={true}
+            >
+                {isViewerLoading ? (
+                    <div className="loading">Loading...</div>
+                ) : testResult ? (
+                    <div className="test-results-container">
+                        <h3>Summary</h3>
+                        <div className="test-results-summary">
+                            <span className="summary-item total">Total: {testResult.summary.total || 0}</span>
+                            <span className="summary-item passed">Passed: {testResult.summary.passed || 0}</span>
+                            <span className="summary-item failed">Failed: {testResult.summary.failed || 0}</span>
+                            <span className="summary-item skipped">Skipped: {testResult.summary.skipped || 0}</span>
+                        </div>
+                        <h3>Details</h3>
+                        {testResult.tests && testResult.tests.map(test => (
+                            <div key={test.nodeid} className={`test-outcome ${test.outcome}`}>
+                                <span className="outcome-status">{test.outcome.toUpperCase()}</span>
+                                <span className="outcome-nodeid">{test.nodeid}</span>
+                                {test.outcome === 'failed' && test.longrepr && (
+                                    <pre className="test-error-details">{test.longrepr}</pre>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <SyntaxHighlighter
+                        language={viewerContent.type === 'test' ? 'python' : 'json'}
+                        style={a11yDark}
+                        showLineNumbers={true}
+                        customStyle={{
+                            margin: 0,
+                            borderRadius: '8px',
+                            maxHeight: '70vh',
+                        }}
+                    >
+                        {viewerContent.content || ''}
+                    </SyntaxHighlighter>
+                )}
             </Modal>
         </div>
     );
