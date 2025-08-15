@@ -339,7 +339,7 @@ function Dashboard() {
     return (
         <div className="dashboard">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
-            <h1>intelliTest Dashboard</h1>
+            <h1>IntelliTest Dashboard</h1>
 
             <div className="status-container">
                 <div className={`status-box ${getAuthStateStatus(authState)}`}>
