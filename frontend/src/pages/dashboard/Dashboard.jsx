@@ -1,646 +1,263 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './Dashboard.css';
-import Modal from '../../components/modal/Modal';
+
+// Custom Hooks
+import { useToasts } from '../../hooks/useToasts';
+import { useDashboardData } from './hooks/useDashboardData';
+
+// API Service
+import * as api from '../../services/apiService';
+
+// Components
 import ToastContainer from '../../components/toast/ToastContainer';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { a11yDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-
-// Vite exposes environment variables via `import.meta.env`
-// Only variables prefixed with VITE_ are exposed to the client.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-
-function formatTimeAgo(isoString) {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    const now = new Date();
-    const seconds = Math.round((now - date) / 1000);
-    const minutes = Math.round(seconds / 60);
-    const hours = Math.round(minutes / 60);
-    const days = Math.round(hours / 24);
-
-    if (seconds < 60) return `${seconds} second${seconds === 1 ? '' : 's'} ago`;
-    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-    return `${days} day${days === 1 ? '' : 's'} ago`;
-}
-
-function formatTimeUntil(isoString) {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    const now = new Date();
-    const seconds = Math.round((date - now) / 1000);
-    const minutes = Math.round(seconds / 60);
-    const hours = Math.round(minutes / 60);
-    const days = Math.round(hours / 24);
-
-    if (seconds < 0) return 'already'; // Should be caught by is_expired, but a good fallback.
-    if (seconds < 60) return `in ${seconds} second${seconds === 1 ? '' : 's'}`;
-    if (minutes < 60) return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
-    if (hours < 24) return `in ${hours} hour${hours === 1 ? '' : 's'}`;
-    return `in ${days} day${days === 1 ? '' : 's'}`;
-}
-
-function getAuthStateStatus(authState) {
-    if (!authState.exists) { // Not found - yellow
-        return 'error'; 
-    }
-    if (authState.is_expired) { // Expired - red
-        return 'error'; 
-    }
-    if (!authState.expires_at) { // Exists, not expired, but expiration date is unknown - yellow
-        return 'warning';
-    }
-    return 'success'; // Present and valid
-}
+import AuthStatus from './components/AuthStatus';
+import FilePanel from './components/FilePanel';
+import CreateTestModal from './components/modals/CreateTestModal';
+import CreateFingerprintModal from './components/modals/CreateFingerprintModal';
+import CreateAuthStateModal from './components/modals/SetAuthStateModal';
+import FileViewerModal from './components/modals/FileViewerModal';
 
 function Dashboard() {
-    const [tests, setTests] = useState([]);
-    const [fingerprints, setFingerprints] = useState([]);
-    const [authState, setAuthState] = useState({ exists: false, last_modified: null });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    // --- STATE MANAGEMENT ---
+    const { toasts, addToast, removeToast } = useToasts();
+    const { tests, fingerprints, authState, loading, error, fetchData } = useDashboardData(addToast);
 
-    // Modal, form, and notification states
+    // UI State
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFingerprintModalOpen, setIsFingerprintModalOpen] = useState(false);
     const [isTestModalOpen, setIsTestModalOpen] = useState(false);
     const [isAutoAuthModalOpen, setIsAutoAuthModalOpen] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    // State for the new file viewer/runner modal
     const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
-    const [viewerContent, setViewerContent] = useState({ filename: '', content: '', type: '' });
+    
+    // Form & Viewer State
+    const [autoAuthForm, setAutoAuthForm] = useState({ /* initial empty state */ });
+    const [viewerContent, setViewerContent] = useState({});
     const [testResult, setTestResult] = useState(null);
     const [isViewerLoading, setIsViewerLoading] = useState(false);
-    const [autoAuthForm, setAutoAuthForm] = useState({
-        login_url: '',
-        login_instructions: '',
-        fingerprint_filename: '',
-        headless: true,
-        username: '',
-        password: '',
-    });
-    const [toasts, setToasts] = useState([]);
 
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const [testsResponse, fingerprintsResponse, authStateResponse] = await Promise.all([
-                fetch(`${API_BASE_URL}/files/tests`),
-                fetch(`${API_BASE_URL}/files/fingerprints`),
-                fetch(`${API_BASE_URL}/files/auth-state`)
-            ]);
-
-            // Check for error responses and parse them
-            if (!testsResponse.ok || !fingerprintsResponse.ok || !authStateResponse.ok) {
-                const errorData = await testsResponse.json().catch(() => ({}));
-                const errorMessage = errorData.detail || 'Network response was not ok. Is the backend API running?';
-                throw new Error(errorMessage);
-            }
-
-            const testsData = await testsResponse.json();
-            const fingerprintsData = await fingerprintsResponse.json();
-            const authStateData = await authStateResponse.json();
-
-            // Check for backend errors in the response data
-            if (testsData.error) {
-                addToast(`Error: ${testsData.error}`, 'error');
-            }
-
-            setTests(testsData);
-            setFingerprints(fingerprintsData);
-            setAuthState(authStateData);
-
-        } catch (err) {
-            setError(err.message);
-            addToast(`Error: ${err.message}`, 'error');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-        
-
-    const removeToast = (id) => {
-        setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-    };
-
-    const addToast = (message, type = 'info', duration) => {
-        const id = Date.now() + Math.random();
-        setToasts(prevToasts => [...prevToasts, { id, message, type }]);
-
-        // Default duration is 5s, but errors are persistent by default so they aren't missed.
-        const finalDuration = duration !== undefined ? duration : (type === 'error' ? null : 5000);
-
-        if (finalDuration !== null) {
-            setTimeout(() => removeToast(id), finalDuration);
-        }
-        return id;
-    };
-    
-    const handleApiSubmit = async (endpoint, body) => {
-        setIsSubmitting(true);
-        
-        const startMessage = endpoint.includes('fingerprint') 
-            ? 'Starting fingerprint generation...' 
-            : 'Starting test generation...';
-        
-        const startId = addToast(startMessage, 'info', null); // Keep this toast until the process is complete
-        
-        try {
-            // 1. Trigger the background task on the server
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.detail || 'An unknown error occurred.');
-
-            // 2. Poll for the result, as the task runs in the background
-            const pollForFile = (fileName, fileType, timeout = 30000, interval = 2000) => {
-                return new Promise((resolve, reject) => {
-                    const startTime = Date.now();
-
-                    const intervalId = setInterval(async () => {
-                        if (Date.now() - startTime > timeout) {
-                            clearInterval(intervalId);
-                            reject(new Error(`Polling for '${fileName}' timed out after ${timeout / 1000}s.`));
-                            return;
-                        }
-
-                        try {
-                            const listUrl = fileType === 'test' ? '/files/tests' : '/files/fingerprints';
-                            const listResponse = await fetch(`${API_BASE_URL}${listUrl}`);
-                            if (!listResponse.ok) return; // Silently fail and retry on next interval
-
-                            const fileList = await listResponse.json();
-
-                            if (fileList.includes(fileName)) {
-                                clearInterval(intervalId);
-                                await fetchData(); // Run a final full data fetch to update everything
-                                resolve();
-                            }
-                        } catch (err) {
-                            console.warn("Polling fetch failed, will retry:", err);
-                        }
-                    }, interval);
-                });
-            };
-
-            const targetFileName = endpoint.includes('fingerprint') ? `${body.output_filename}.json` : body.file_name;
-            const fileType = endpoint.includes('fingerprint') ? 'fingerprint' : 'test';
-
-            await pollForFile(targetFileName, fileType);
-
-            // 3. Finalize and update UI
-            removeToast(startId);
-            addToast(`Successfully generated ${targetFileName}`, 'success');
-            return true; // Indicate success to the calling function
-        } catch (error) {
-            removeToast(startId);
-            addToast(error.message, 'error');
-            return false;
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleFingerprintSubmit = async (event) => {
-        event.preventDefault();
-        
-        if (isSubmitting) {
-            console.log('Submission already in progress, ignoring...');
-            return;
-        }
-        
-        console.log('Starting handleFingerprintSubmit...');
-        const formData = new FormData(event.target);
-        const body = {
-            url: formData.get('url'),
-            output_filename: formData.get('output_filename'),
-            use_authentication: formData.get('use_authentication') === 'on',
-            allow_redirects: formData.get('allow_redirects') === 'on',
-        };
-
-        console.log('Form data:', body);
-        const success = await handleApiSubmit('/fingerprint', body);
-        console.log('handleApiSubmit result:', success);
-        
-        if (success) {
-            setIsFingerprintModalOpen(false);
-        }
-    };
-
-    const handleTestSubmit = async (event) => {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-        const body = {
-            description: formData.get('description'),
-            file_name: formData.get('file_name'),
-            fingerprint_filename: formData.get('fingerprint_filename'),
-            requires_login: formData.get('requires_login') === 'on',
-        };
-
-        const success = await handleApiSubmit('/generate-test', body);
-        if (success) {
-            setIsTestModalOpen(false);
-        }
-    };
-
-    const handleAutoAuthSubmit = async (event) => {
-        event.preventDefault();
-        if (isSubmitting) return;
-
-        setIsSubmitting(true);
-        const startId = addToast('Starting automated auth state creation...', 'info', null);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth_state/automated`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(autoAuthForm),
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.detail || 'An unknown error occurred.');
-
-            const pollForAuthFile = (timeout = 12010, interval = 3000) => {
-                return new Promise((resolve, reject) => {
-                    const startTime = Date.now();
-                    const initialTimestamp = authState.last_modified;
-
-                    const intervalId = setInterval(async () => {
-                        if (Date.now() - startTime > timeout) {
-                            clearInterval(intervalId);
-                            reject(new Error(`Polling for auth state update timed out after ${timeout / 1000}s.`));
-                            return;
-                        }
-                        try {
-                            const authResponse = await fetch(`${API_BASE_URL}/files/auth-state`);
-                            if (!authResponse.ok) return;
-                            const newAuthState = await authResponse.json();
-                            if (newAuthState.exists && newAuthState.last_modified !== initialTimestamp) {
-                                clearInterval(intervalId);
-                                await fetchData();
-                                resolve();
-                            }
-                        } catch (err) { /* Silently ignore polling errors and retry */ }
-                    }, interval);
-                });
-            };
-            await pollForAuthFile();
-            removeToast(startId);
-            addToast('Successfully created new auth state!', 'success');
-            setIsAutoAuthModalOpen(false);
-        } catch (error) {
-            removeToast(startId);
-            addToast(error.message, 'error');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const openAutoAuthModal = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth_state/automated/settings`);
-            if (response.ok) {
-                const settings = await response.json();
-                // Ensure all fields have a default value to avoid uncontrolled component warnings
-                setAutoAuthForm({
-                    login_url: settings.login_url || '',
-                    login_instructions: settings.login_instructions || '',
-                    fingerprint_filename: settings.fingerprint_filename || '',
-                    headless: settings.headless !== undefined ? settings.headless : true,
-                    username: settings.username || '',
-                    password: settings.password || '',
-                });
-            } else {
-                // If settings don't exist or there's an error, use empty defaults
-                setAutoAuthForm({ login_url: '', login_instructions: '', fingerprint_filename: '', headless: true, username: '', password: '' });
-            }
-        } catch (error) {
-            console.error("Failed to fetch auth settings:", error);
-            addToast("Could not load previous auth settings.", "error");
-        }
-        setIsAutoAuthModalOpen(true);
-    };
-
+    // --- EVENT HANDLERS ---
     const handleAutoAuthFormChange = (e) => {
         const { name, value, type, checked } = e.target;
         setAutoAuthForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
+    const openAutoAuthModal = async () => {
+        try {
+            const settings = await api.fetchAutoAuthSettings();
+            setAutoAuthForm({
+                login_url: settings.login_url || '',
+                login_instructions: settings.login_instructions || '',
+                fingerprint_filename: settings.fingerprint_filename || '',
+                headless: settings.headless !== undefined ? settings.headless : true,
+                username: settings.username || '',
+                password: settings.password || '',
+            });
+            setIsAutoAuthModalOpen(true);
+        } catch (err) {
+            addToast("Could not load previous auth settings.", "error");
+        }
+    };
+
+    const handleFormSubmit = async (handler, successCallback, successMessage) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        // 1. Show a generic "in-progress" toast that doesn't auto-close
+        const toastId = addToast('Processing request...', 'info', null);
+
+        try {
+            await handler();
+            successCallback();
+            fetchData(); // Refresh data on success
+
+            // 2. Replace the "in-progress" toast with a success message
+            removeToast(toastId);
+            addToast(successMessage, 'success');
+
+        } catch (err) {
+            // 3. On error, replace the "in-progress" toast with an error message
+            removeToast(toastId);
+            addToast(err.message, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleFingerprintSubmit = async (e) => {
+        e.preventDefault();
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        setIsFingerprintModalOpen(false); 
+        
+        const inProgressToastId = addToast(
+            'Fingerprint task submitted. Awaiting completion...', 
+            'info', 
+            null
+        );
+
+        try {
+            const formData = new FormData(e.target);
+            const body = {
+                url: formData.get('url'),
+                output_filename: formData.get('output_filename'),
+                use_authentication: formData.get('use_authentication') === 'on',
+                allow_redirects: formData.get('allow_redirects') === 'on',
+            };
+
+            // 1. Make the initial request to start the task
+            const response = await api.submitGenerationTask('/generate/fingerprint', body);
+            
+            // 2. Start polling with the returned task_id
+            const successMessage = `Fingerprint '${body.output_filename}.json' created successfully.`;
+            pollTaskStatus(response.task_id, inProgressToastId, successMessage);
+
+        } catch (err) {
+            // This catches errors from the INITIAL submission only
+            removeToast(inProgressToastId);
+            addToast(err.message, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleTestSubmit = async (e) => {
+        e.preventDefault();
+        if (isSubmitting) return;
+        
+        setIsSubmitting(true);
+        setIsTestModalOpen(false);
+
+        const inProgressToastId = addToast(
+            'Test generation submitted. Awaiting completion...', 
+            'info', 
+            null
+        );
+
+        try {
+            const formData = new FormData(e.target);
+            const body = {
+                description: formData.get('description'),
+                file_name: formData.get('file_name'),
+                fingerprint_filename: formData.get('fingerprint_filename'),
+                requires_login: formData.get('requires_login') === 'on',
+            };
+
+            // 1. Initial request
+            const response = await api.submitGenerationTask('/generate/test', body);
+            
+            // 2. Start polling
+            const successMessage = `Test '${body.file_name}' created successfully.`;
+            pollTaskStatus(response.task_id, inProgressToastId, successMessage);
+
+        } catch (err) {
+            removeToast(inProgressToastId);
+            addToast(err.message, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+        
+    const handleAutoAuthSubmit = (e) => {
+        e.preventDefault();
+        handleFormSubmit(
+            () => api.submitAutoAuth(autoAuthForm),
+            () => setIsAutoAuthModalOpen(false),
+            'Auth state generation started successfully.' // <-- Pass the message
+        );
+    };
+    
+    const handleDeleteFile = async (filename, type) => {
+        if (!window.confirm(`Are you sure you want to delete ${filename}?`)) return;
+        const toastId = addToast(`Deleting ${filename}...`, 'info', null);
+        try {
+            await api.deleteFile(filename, type);
+            removeToast(toastId);
+            addToast(`${filename} deleted successfully.`, 'success');
+            fetchData();
+        } catch (err) {
+            removeToast(toastId);
+            addToast(err.message, 'error');
+        }
+    };
+
     const handleViewFile = async (filename, type) => {
         setIsViewerLoading(true);
-        setTestResult(null); // Clear previous test results
+        setTestResult(null);
         setIsViewerModalOpen(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/files/content?type=${type}&filename=${filename}`);
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Failed to fetch file content.');
-            }
-            const data = await response.json();
+            const data = await api.fetchFileContent(filename, type);
             setViewerContent({ filename, content: data.content, type });
-        } catch (error) {
-            addToast(error.message, 'error');
-            setIsViewerModalOpen(false); // Close modal on error
+        } catch (err) {
+            addToast(err.message, 'error');
+            setIsViewerModalOpen(false);
         } finally {
             setIsViewerLoading(false);
         }
     };
-
-    const handleDeleteFile = async (filename, type) => {
-        if (window.confirm(`Are you sure you want to delete ${filename}? This action cannot be undone.`)) {
-            const startId = addToast(`Deleting ${filename}...`, 'info', null);
-            try {
-                const response = await fetch(`${API_BASE_URL}/files?type=${type}&filename=${filename}`, {
-                    method: 'DELETE',
-                });
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to delete file.');
-                }
-                removeToast(startId);
-                addToast(`${filename} deleted successfully.`, 'success');
-                fetchData(); // Refresh the file lists
-            } catch (error) {
-                removeToast(startId);
-                addToast(error.message, 'error');
-            }
-        }
-    };
-
+    
     const handleRunTest = async (filename) => {
         setIsViewerLoading(true);
-        setViewerContent({ filename, content: null, type: 'test' }); // Clear previous content
+        setViewerContent({ filename, content: null, type: 'test' });
         setTestResult(null);
         setIsViewerModalOpen(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/tests/run`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename }),
-            });
-            const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.detail || 'Failed to run test.');
-            }
+            const result = await api.runTest(filename);
             setTestResult(result);
-        } catch (error) {
-            addToast(error.message, 'error');
+        } catch (err) {
+            addToast(err.message, 'error');
             setIsViewerModalOpen(false);
         } finally {
             setIsViewerLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    const pollTaskStatus = (taskId, inProgressToastId, successMessage) => {
+        const intervalId = setInterval(async () => {
+            try {
+                const response = await api.checkTaskStatus(taskId);
 
-    if (loading) {
-        return <div className="loading">Loading Dashboard...</div>;
-    }
+                if (response.status === 'complete') {
+                    clearInterval(intervalId);
+                    removeToast(inProgressToastId);
+                    addToast(successMessage, 'success');
+                    fetchData();
+                } else if (response.status === 'failed') {
+                    clearInterval(intervalId);
+                    removeToast(inProgressToastId);
+                    addToast('The background task failed. Please check server logs.', 'error');
+                }
+                // If the status is 'pending', the interval continues automatically.
 
-    if (error) {
-        return <div className="error">{error}</div>;
-    }
+            } catch (err) {
+                // Error handling for polling request
+                clearInterval(intervalId);
+                removeToast(inProgressToastId);
+                addToast(`Error checking task status: ${err.message}`, 'error');
+            }
+        }, 3000); // Polling interval
+    };
+
+
+    // --- RENDER LOGIC ---
+    if (loading) return <div className="loading">Loading Dashboard...</div>;
+    if (error) return <div className="error">{error}</div>;
 
     return (
         <div className="dashboard">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
             <h1>IntelliTest Dashboard</h1>
 
-            <div className="status-container">
-                <div className={`status-box ${getAuthStateStatus(authState)}`}>
-                    <strong>Auth State:</strong>
-                    {(() => {
-                        if (!authState.exists) return ' Not Found';
-                        const lastUpdated = `(Updated ${formatTimeAgo(authState.last_modified)})`;
-                        if (authState.is_expired) return ` Expired ${lastUpdated}`;
-                        if (!authState.expires_at) return ` Present, expiration unknown ${lastUpdated}`;
-                        const expires = `(Expires ${formatTimeUntil(authState.expires_at)})`;
-                        return ` Valid ${expires}`;
-                    })()}
-                </div>
-                <button className="create-btn auth-btn" onClick={openAutoAuthModal}>Set Auth State</button>
-            </div>
+            <AuthStatus authState={authState} onSetAuthState={openAutoAuthModal} />
 
             <div className="panels-container">
-                <div className="panel">
-                    <h2>Available Tests</h2>
-                    <button className="create-btn" onClick={() => setIsTestModalOpen(true)}>Create New Test</button>
-                    <ul className="file-list">
-                        {tests.length > 0 ? ( tests.map(test => (
-                            <li key={test} className="file-item">
-                                <span>{test}</span>
-                                <div className="file-actions">
-                                    <button className="action-btn view-btn" title="View File" onClick={() => handleViewFile(test, 'test')}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    </button>
-                                    <button className="action-btn run-btn" title="Run Test" onClick={() => handleRunTest(test)}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                    </button>
-                                    <button className="action-btn delete-btn" title="Delete File" onClick={() => handleDeleteFile(test, 'test')}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                    </button>
-                                </div>
-                            </li>
-                        ))) : (
-                            <li>No tests found.</li>
-                        )}
-                    </ul>
-                </div>
-                <div className="panel">
-                    <h2>Available Page Fingerprints</h2>
-                    <button className="create-btn" onClick={() => setIsFingerprintModalOpen(true)}>Create New Fingerprint</button>
-                    <ul className="file-list">
-                        {fingerprints.length > 0 ? ( fingerprints.map(fp => (
-                            <li key={fp} className="file-item">
-                                <span>{fp}</span>
-                                <div className="file-actions">
-                                    <button className="action-btn view-btn" title="View File" onClick={() => handleViewFile(fp, 'fingerprint')}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    </button>
-                                    <button className="action-btn delete-btn" title="Delete File" onClick={() => handleDeleteFile(fp, 'fingerprint')}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                    </button>
-                                </div>
-                            </li>
-                        ))) : (
-                            <li>No fingerprints found.</li>
-                        )}
-                    </ul>
-                </div>
+                <FilePanel title="Available Tests" files={tests} fileType="test" onCreate={() => setIsTestModalOpen(true)} onView={handleViewFile} onRun={handleRunTest} onDelete={handleDeleteFile} />
+                <FilePanel title="Available Page Fingerprints" files={fingerprints} fileType="fingerprint" onCreate={() => setIsFingerprintModalOpen(true)} onView={handleViewFile} onDelete={handleDeleteFile} />
             </div>
 
-            {/* --- Modals --- */}
-
-                <Modal isOpen={isFingerprintModalOpen} onClose={() => setIsFingerprintModalOpen(false)} title="Create New Fingerprint">
-                    <form onSubmit={handleFingerprintSubmit} className="modal-form">
-                    <label htmlFor="url">Target URL</label>
-                    <input type="url" id="url" name="url" placeholder="https://example.com/login" required />
-
-                    <label htmlFor="output_filename">Output Filename (without extension)</label>
-                    <input type="text" id="output_filename" name="output_filename" placeholder="loginPage" required />
-
-                    <div className="checkbox-group">
-                        <input type="checkbox" id="use_authentication" name="use_authentication" />
-                        <label htmlFor="use_authentication">Use Authenticated Session</label>
-                    </div>
-
-                    <div className="checkbox-group">
-                        <input type="checkbox" id="allow_redirects" name="allow_redirects" />
-                        <label htmlFor="allow_redirects">Allow Redirects</label>
-                    </div>
-
-                    <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                        {isSubmitting ? 'Generating...' : 'Generate Fingerprint'}
-                    </button>
-                </form>
-            </Modal>
-
-            <Modal isOpen={isAutoAuthModalOpen} onClose={() => setIsAutoAuthModalOpen(false)} title="Create Auth State">
-                <form onSubmit={handleAutoAuthSubmit} className="modal-form">
-                    <label htmlFor="login_url">Login Page URL</label>
-                    <input 
-                        type="url" 
-                        id="login_url" 
-                        name="login_url" 
-                        placeholder="https://example.com/login" 
-                        value={autoAuthForm.login_url}
-                        onChange={handleAutoAuthFormChange}
-                        required 
-                    />
-
-                    <label htmlFor="login_instructions">Login Instructions</label>
-                    <textarea 
-                        id="login_instructions" 
-                        name="login_instructions" 
-                        rows="3" 
-                        placeholder="Describe the login process in plain english." 
-                        value={autoAuthForm.login_instructions}
-                        onChange={handleAutoAuthFormChange}
-                        required
-                    ></textarea>    
-
-                    <label htmlFor="username">Username (Optional)</label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        name="username" 
-                        placeholder="Defaults to TEST_USER in .env" 
-                        value={autoAuthForm.username}
-                        onChange={handleAutoAuthFormChange}
-                    />
-
-                    <label htmlFor="password">Password (Optional)</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        placeholder="Defaults to PASSWORD in .env" 
-                        value={autoAuthForm.password}
-                        onChange={handleAutoAuthFormChange}
-                    />
-                    
-                    <label htmlFor="fingerprint_filename">Fingerprint File (Optional)</label>
-                    <select id="fingerprint_filename" name="fingerprint_filename" value={autoAuthForm.fingerprint_filename} onChange={handleAutoAuthFormChange}>
-                        <option value="">None</option>
-                        {fingerprints.map(fp => (
-                            <option key={fp} value={fp}>{fp}</option>
-                        ))}
-                    </select>
-
-                    <div className="checkbox-group">
-                        <input
-                            type="checkbox"
-                            id="headless"
-                            name="headless"
-                            checked={autoAuthForm.headless}
-                            onChange={handleAutoAuthFormChange}
-                        />
-                        <label htmlFor="headless">Run in Headless Mode</label>
-                    </div>
-
-                    <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                        {isSubmitting ? 'Generating...' : 'Generate Auth State'}
-                    </button>
-                </form>
-            </Modal>
-
-            <Modal isOpen={isTestModalOpen} onClose={() => setIsTestModalOpen(false)} title="Create New Test File">
-                <form onSubmit={handleTestSubmit} className="modal-form">
-                    <label htmlFor="description">Test Description</label>
-                    <textarea id="description" name="description" rows="3" placeholder="e.g., Verify that a user can log in with valid credentials." required></textarea>
-
-                    <label htmlFor="file_name">Test Filename</label>
-                    <input type="text" id="file_name" name="file_name" placeholder="test_successful_login.py" required />
-
-                    <label htmlFor="fingerprint_filename">Fingerprint File (Optional)</label>
-                    <select id="fingerprint_filename" name="fingerprint_filename">
-                        <option value="">None</option>
-                        {fingerprints.map(fp => (
-                            <option key={fp} value={fp}>{fp}</option>
-                        ))}
-                    </select>
-
-                    <div className="checkbox-group">
-                        <input type="checkbox" id="requires_login" name="requires_login" />
-                        <label htmlFor="requires_login">Requires Login (uses Auth State for logging in)</label>
-                    </div>
-
-                    <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                        {isSubmitting ? 'Generating...' : 'Generate Test'}
-                    </button>
-                </form>
-            </Modal>
-
-            <Modal 
-                isOpen={isViewerModalOpen} 
-                onClose={() => setIsViewerModalOpen(false)} 
-                title={testResult ? `Test Results: ${viewerContent.filename}` : `Viewing: ${viewerContent.filename}`}
-                isLarge={true}
-            >
-                {isViewerLoading ? (
-                    <div className="loading">Loading...</div>
-                ) : testResult ? (
-                    <div className="test-results-container">
-                        <h3>Summary</h3>
-                        <div className="test-results-summary">
-                            <span className="summary-item total">Total: {testResult.summary.total || 0}</span>
-                            <span className="summary-item passed">Passed: {testResult.summary.passed || 0}</span>
-                            <span className="summary-item failed">Failed: {testResult.summary.failed || 0}</span>
-                            <span className="summary-item skipped">Skipped: {testResult.summary.skipped || 0}</span>
-                        </div>
-                        <h3>Details</h3>
-                        {testResult.tests && testResult.tests.map(test => (
-                            <div key={test.nodeid} className={`test-outcome ${test.outcome}`}>
-                                <span className="outcome-status">{test.outcome.toUpperCase()}</span>
-                                <span className="outcome-nodeid">{test.nodeid}</span>
-                                {test.outcome === 'failed' && test.longrepr && (
-                                    <pre className="test-error-details">{test.longrepr}</pre>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <SyntaxHighlighter
-                        language={viewerContent.type === 'test' ? 'python' : 'json'}
-                        style={a11yDark}
-                        showLineNumbers={true}
-                        customStyle={{
-                            margin: 0,
-                            borderRadius: '8px',
-                            maxHeight: '70vh',
-                        }}
-                    >
-                        {viewerContent.content || ''}
-                    </SyntaxHighlighter>
-                )}
-            </Modal>
+            <CreateFingerprintModal isOpen={isFingerprintModalOpen} onClose={() => setIsFingerprintModalOpen(false)} onSubmit={handleFingerprintSubmit} isSubmitting={isSubmitting} />
+            <CreateAuthStateModal isOpen={isAutoAuthModalOpen} onClose={() => setIsAutoAuthModalOpen(false)} onSubmit={handleAutoAuthSubmit} fingerprints={fingerprints} isSubmitting={isSubmitting} formState={autoAuthForm} onFormChange={handleAutoAuthFormChange} />
+            <CreateTestModal isOpen={isTestModalOpen} onClose={() => setIsTestModalOpen(false)} onSubmit={handleTestSubmit} fingerprints={fingerprints} isSubmitting={isSubmitting} />
+            <FileViewerModal isOpen={isViewerModalOpen} onClose={() => setIsViewerModalOpen(false)} isLoading={isViewerLoading} testResult={testResult} content={viewerContent} />
         </div>
     );
 }

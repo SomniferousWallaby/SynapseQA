@@ -39,4 +39,4 @@ echo "--- Starting Frontend Development Server (in background) ---"
 
 echo "--- Starting Backend API Server (in foreground) on port $BACKEND_PORT ---"
 echo "Press Ctrl+C to stop both servers."
-python -m uvicorn src.intelli_test.api:app --reload --port $BACKEND_PORT
+python -m uvicorn src.intelli_test.api:app --reload --reload-dir src --port $BACKEND_PORT

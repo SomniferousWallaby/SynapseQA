@@ -80,9 +80,10 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
 
         # Clean the response to remove markdown fences and other unwanted characters.
         cleaned_text = raw_text.strip().removeprefix("```json").removesuffix("```").strip()
-        logger.info("Successfully received and cleaned AI response.")
+        valid_json_string = cleaned_text.replace("\\'", "'")
 
-        parsed_json = json.loads(cleaned_text)
+        logger.info("Successfully received and cleaned AI response.")
+        parsed_json = json.loads(valid_json_string)
 
         # The AI sometimes wraps the response object in a list.
         # If it's a list with one dictionary inside, we can safely extract it.
