@@ -4,7 +4,7 @@ import json
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime
 from intelli_test.utilities import config
-from ..security import get_secure_path
+from ..security import get_secure_path, get_secure_path_for_delete
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -117,3 +117,32 @@ async def get_file_content(
         # Catch any other potential errors (e.g., permission errors)
         logger.error(f"Error reading file '{filename}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not read the file.")
+    
+@router.delete("/")
+async def delete_file_endpoint(
+    type: str = Query(..., description="The type of file: 'test' or 'fingerprint'"),
+    filename: str = Query(..., description="The name of the file to delete")
+):
+    """
+    Deletes a specific test or fingerprint file.
+    """
+    logger.info(f"Received request to delete file '{filename}' of type '{type}'")
+    try:
+        # Validate input and get a safe file path
+        secure_path = get_secure_path_for_delete(type, filename)
+        
+        if secure_path.is_file():
+            secure_path.unlink()  # Actual delete operation
+            logger.info(f"Successfully deleted file: {secure_path}")
+            return {"message": f"File '{filename}' deleted successfully."}
+        else:
+            # If the file is already gone, that's still a success.
+            logger.warning(f"File to delete not found (already deleted?): {secure_path}")
+            return {"message": f"File '{filename}' was already deleted."}
+
+    except HTTPException as e:
+        # Re-raise errors from the security helper (e.g., invalid filename)
+        raise e
+    except Exception as e:
+        logger.error(f"Error during file deletion for '{filename}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred while deleting the file.")
