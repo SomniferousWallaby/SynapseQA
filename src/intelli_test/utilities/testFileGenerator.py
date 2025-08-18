@@ -81,6 +81,7 @@ You are an expert Python test automation engineer specializing in Playwright and
     {page_object_context}
 7.  Use `expect()` from Playwright for all assertions. For example: `expect(locator).to_be_visible()` or `expect({fixture_name}).to_have_url(...)`.
 8.  If the test does NOT require login (i.e., it uses the `page` fixture), use `config.TEST_USER` and `config.PASSWORD` for credentials if the description implies a login action.
+9.  If their are multiple elements with similar names, use the element that makes sense in the context of the test. For example, if the description states a "message" button or field should be visible and there is a visible messages button as well as a messages field in a dropdown, use the button.
 
 **User's Test Description:**
 "{description}"

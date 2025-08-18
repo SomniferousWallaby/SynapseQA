@@ -4,7 +4,7 @@ import logging
 from playwright.sync_api import Page, expect, Browser
 from intelli_test.utilities import config
 
-def pytest_configure(_config):
+def pytest_configure(config):
     """
     Configures logging for the entire test suite run.
     This hook runs once before any tests are collected.

@@ -11,6 +11,40 @@
     margin-bottom: 2rem;
 }
 
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.panel-header h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.panel-header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.panel-header-actions .create-btn {
+    margin-bottom: 0;
+    width: auto;
+}
+
+.run-all-btn {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.run-all-btn:hover {
+    background-color: #e0a800;
+}
+
 .panels-container {
     display: flex;
     flex-wrap: wrap;
@@ -54,8 +88,8 @@
 .file-list {
     list-style-type: none;
     padding: 0;
-    max-height: 300px;
-    overflow-y: auto;
+    /* max-height: 300px;
+    overflow-y: auto; */
 }
 
 .file-list li {
@@ -66,6 +100,17 @@
     border-radius: 4px;
     font-family: 'SF Mono', 'Courier New', Courier, monospace;
     font-size: 0.9rem;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .loading, .error {
@@ -180,4 +225,84 @@
 .submit-btn:disabled {
     background-color: #aaa;
     cursor: not-allowed;
+}
+
+/* Action buttons in file lists */
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: white;
+    line-height: 1; /* Prevents extra space from font-size */
+}
+
+.view-btn { background-color: #007bff; }
+.view-btn:hover { background-color: #0056b3; }
+
+.run-btn { background-color: #28a745; }
+.run-btn:hover { background-color: #218838; }
+
+.delete-btn { background-color: #dc3545; }
+.delete-btn:hover { background-color: #c82333; }
+
+/* Test Results Styling */
+.test-results-container {
+    font-family: 'SF Mono', 'Courier New', Courier, monospace;
+}
+
+.test-results-summary {
+    display: flex;
+    gap: 1.5rem;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.summary-item { font-weight: bold; }
+.summary-item.passed { color: #28a745; }
+.summary-item.failed { color: #dc3545; }
+.summary-item.skipped { color: #6c757d; }
+
+.test-outcome {
+    padding: 0.75rem;
+    border: 1px solid #e9e9e9;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.test-outcome.passed { border-left: 5px solid #28a745; }
+.test-outcome.failed { border-left: 5px solid #dc3545; }
+.test-outcome.skipped { border-left: 5px solid #6c757d; }
+
+.outcome-status {
+    font-weight: bold;
+    margin-right: 1rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: white;
+}
+
+.passed .outcome-status { background-color: #28a745; }
+.failed .outcome-status { background-color: #dc3545; }
+.skipped .outcome-status { background-color: #6c757d; }
+
+.test-error-details {
+    background-color: #272822; /* Match common dark theme */
+    color: #f8f8f2;
+    padding: 1rem;
+    margin-top: 0.75rem;
+    border-radius: 4px;
+    white-space: pre-wrap; /* Allow long lines to wrap */
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
 }

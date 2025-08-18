@@ -78,7 +78,7 @@ def create_automated_auth_state(login_url: str, login_instructions: str, fingerp
     fingerprint_data = None
     # 1. Load the fingerprint file
     if fingerprint_filename:
-        fingerprint_path = os.path.join(config.PROJECT_ROOT, 'elements', fingerprint_filename)
+        fingerprint_path = os.path.join(config.PROJECT_ROOT.parent, 'elements', fingerprint_filename)
         if not os.path.exists(fingerprint_path):
             raise FileNotFoundError(f"Fingerprint file not found at: {fingerprint_path}")
     

@@ -1,6 +1,7 @@
 playwright
 pytest
 pytest-playwright
+pytest-json-report
 python-dotenv
 scikit-image
 opencv-python

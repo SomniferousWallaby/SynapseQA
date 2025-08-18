@@ -7,8 +7,8 @@ PYTHON := $(VENV_DIR)/bin/python
 
 help:
 	@echo "Available commands:"
-	@echo "  install           - Creates a virtual environment and installs Python dependencies."
-	@echo "  setup-dev         - Runs 'install' and also installs frontend dependencies and Playwright browsers. The one-stop shop for setup."
+	@echo "  setup-dev         - The one-stop shop for setup. Creates a venv, compiles requirements, and installs all Python, Node.js, and Playwright dependencies."
+	@echo "  install           - (Called by setup-dev) Creates a venv and installs Python dependencies."
 	@echo "  api               - Runs the backend FastAPI server with auto-reload."
 	@echo "  create-auth-state - (Legacy) Runs the interactive script to manually save a login session."
 	@echo "  test              - Runs the pytest test suite."
@@ -17,6 +17,10 @@ help:
 install:
 	@echo "Creating virtual environment..."
 	python3 -m venv $(VENV_DIR)
+	@echo "Installing pip-tools to compile requirements..."
+	$(PYTHON) -m pip install --upgrade pip pip-tools
+	@echo "Compiling requirements.in to requirements.txt..."
+	$(PYTHON) -m piptools compile -o requirements.txt requirements.in
 	@echo "Installing Python dependencies from requirements.txt..."
 	$(PYTHON) -m pip install -r requirements.txt
 	@echo "Python installation complete. Activate with: source $(VENV_DIR)/bin/activate"

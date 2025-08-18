@@ -3,7 +3,6 @@ import json
 import logging
 import os
 from playwright.sync_api import sync_playwright, Page
-
 from . import config, htmlSimplifier
 
 # Logging is configured at the application entry point (e.g., in api.py or conftest.py).
@@ -12,6 +11,7 @@ logger = logging.getLogger(__name__)
 # Configure the generative AI model
 genai.configure(api_key=config.API_KEY)
 model = genai.GenerativeModel(model_name=config.MODEL_NAME)
+
 
 def build_locator_prompt(simplified_html: str) -> str:
     """
@@ -80,9 +80,10 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
 
         # Clean the response to remove markdown fences and other unwanted characters.
         cleaned_text = raw_text.strip().removeprefix("```json").removesuffix("```").strip()
-        logger.info("Successfully received and cleaned AI response.")
+        valid_json_string = cleaned_text.replace("\\\\'", "\'")
 
-        parsed_json = json.loads(cleaned_text)
+        parsed_json = json.loads(valid_json_string)
+        logger.info("Successfully received and cleaned AI response.")
 
         # The AI sometimes wraps the response object in a list.
         # If it's a list with one dictionary inside, we can safely extract it.
@@ -113,9 +114,13 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
 
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse JSON from AI response: {e}")
-        logger.error(f"Invalid JSON string received: {cleaned_text}")
+        logger.error(f"Invalid JSON string received: {valid_json_string}")
+        raise TypeError(e)
     except Exception as e:
         logger.error(f"An unexpected error occurred during AI query or file saving: {e}")
+        raise e
+
+
 
 
 def generate_fingerprint_file(target_url: str, output_file: str, use_authentication: bool = False, allow_redirects: bool = False):
