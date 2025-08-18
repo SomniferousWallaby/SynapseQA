@@ -1,9 +1,10 @@
 import os
 import logging
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime
 from intelli_test.utilities import config
+from ..security import get_secure_path
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -92,3 +93,27 @@ async def get_auth_state_status():
     else:
         logger.warning(f"Auth state file not found at '{auth_path}'.")
         return {"exists": False, "last_modified": None, "expires_at": None, "is_expired": True}
+
+@router.get("/content")
+async def get_file_content(
+    type: str = Query(..., description="The type of file: 'test' or 'fingerprint'"),
+    filename: str = Query(..., description="The name of the file to retrieve")
+):
+    """
+    Retrieves the content of a specific test or fingerprint file.
+    """
+    try:
+        # Get absolute path
+        secure_path = get_secure_path(type, filename)
+        
+        # Read the file's text content
+        content = secure_path.read_text(encoding="utf-8")
+        
+        return {"filename": filename, "content": content}
+    except HTTPException as e:
+        # If get_secure_path raised an error (e.g., file not found), re-raise it
+        raise e
+    except Exception as e:
+        # Catch any other potential errors (e.g., permission errors)
+        logger.error(f"Error reading file '{filename}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not read the file.")

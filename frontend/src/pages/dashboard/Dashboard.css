@@ -54,8 +54,8 @@
 .file-list {
     list-style-type: none;
     padding: 0;
-    max-height: 300px;
-    overflow-y: auto;
+    /* max-height: 300px;
+    overflow-y: auto; */
 }
 
 .file-list li {
