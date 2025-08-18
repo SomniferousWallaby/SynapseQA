@@ -74,3 +74,7 @@ export const runTest = (filename) => {
         body: JSON.stringify({ filename }),
     }).then(handleResponse);
 };
+
+export const fetchReports = () => {
+    return fetch(`${API_BASE_URL}/files/reports`).then(handleResponse);
+};

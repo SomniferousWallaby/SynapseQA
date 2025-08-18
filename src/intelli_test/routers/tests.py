@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from intelli_test import security
 from intelli_test.utilities import config
-import uuid
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,7 @@ async def run_test_endpoint(request: TestRunRequest):
     """
     logger.info(f"Received request to run test: {request.filename}")
 
-    report_dir = config.PROJECT_ROOT.parent / "results"
+    report_dir = config.PROJECT_ROOT.parent / "reports"
     report_dir.mkdir(parents=True, exist_ok=True)
     report_path = report_dir / f"report-{request.filename.removesuffix('.py').removeprefix('test_')}.json"
 

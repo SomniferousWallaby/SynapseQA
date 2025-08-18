@@ -11,7 +11,7 @@ def get_secure_path(file_type: str, filename: str) -> Path:
     Validates file_type and filename, and returns a secure, absolute path.
     Prevents path traversal attacks.
     """
-    if file_type not in ("test", "fingerprint"):
+    if file_type not in ("test", "fingerprint", "report"):
         raise HTTPException(status_code=400, detail="Invalid file type specified.")
 
     # Basic sanitization
@@ -21,6 +21,7 @@ def get_secure_path(file_type: str, filename: str) -> Path:
     base_dir_map = {
         "test": Path(project_root) / "tests",
         "fingerprint": Path(project_root) / "elements",
+        "report": Path(project_root) / "reports"
     }
     
     base_dir = base_dir_map[file_type]
@@ -47,6 +48,7 @@ def get_secure_path_for_delete(file_type: str, filename: str) -> Path:
     base_dir_map = {
         "test": Path(project_root) / "tests",
         "fingerprint": Path(project_root) / "elements",
+        "report": Path(project_root) / "reports"
     }
     
     base_dir = base_dir_map[file_type]

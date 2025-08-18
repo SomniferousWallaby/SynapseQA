@@ -96,11 +96,11 @@ async def get_auth_state_status():
 
 @router.get("/content")
 async def get_file_content(
-    type: str = Query(..., description="The type of file: 'test' or 'fingerprint'"),
+    type: str = Query(..., description="The type of file: 'test', 'fingerprint', or 'report'"),
     filename: str = Query(..., description="The name of the file to retrieve")
 ):
     """
-    Retrieves the content of a specific test or fingerprint file.
+    Retrieves the content of a specific test, fingerprint, or report file.
     """
     try:
         # Get absolute path
@@ -117,7 +117,24 @@ async def get_file_content(
         # Catch any other potential errors (e.g., permission errors)
         logger.error(f"Error reading file '{filename}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not read the file.")
-    
+
+@router.get("/reports")
+async def list_report_files():
+    """Returns a sorted list of available test report JSON files."""
+    reports_dir = config.PROJECT_ROOT.parent / "reports"
+    logger.info(f"Looking for reports in: {reports_dir}")
+    if not reports_dir.is_dir():
+        logger.warning(f"Reports directory not found at '{reports_dir}'. Returning empty list.")
+        return []
+    try:
+        # Get all json files and sort them by modification time (newest first)
+        files = reports_dir.glob("*.json")
+        sorted_files = sorted(files, key=os.path.getmtime, reverse=True)
+        logger.info(f"Found {len(sorted_files)} report files.")
+        return [f.name for f in sorted_files]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.delete("/")
 async def delete_file_endpoint(
     type: str = Query(..., description="The type of file: 'test' or 'fingerprint'"),

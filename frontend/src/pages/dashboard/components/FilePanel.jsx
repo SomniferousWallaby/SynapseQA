@@ -1,15 +1,19 @@
+import React from 'react';
+
+// Icon components are clean and well-defined.
 const ViewIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const RunIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
 const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 
-
-const FilePanel = ({ title, files, fileType, onCreate, onView, onRun, onDelete }) => {
+const FilePanel = ({ title, files = [], fileType, onCreate, onView, onRun, onDelete }) => {
     return (
         <div className="panel">
             <h2>{title}</h2>
-            <button className="create-btn" onClick={onCreate}>
-                Create New {fileType === 'test' ? 'Test' : 'Fingerprint'}
-            </button>
+            {onCreate && (
+                <button className="create-btn" onClick={onCreate}>
+                    Create New {fileType === 'test' ? 'Test' : 'Fingerprint'}
+                </button>
+            )}
             <ul className="file-list">
                 {files.length > 0 ? (
                     files.map(file => (

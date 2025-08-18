@@ -20,7 +20,7 @@ import FileViewerModal from './components/modals/FileViewerModal';
 function Dashboard() {
     // --- STATE MANAGEMENT ---
     const { toasts, addToast, removeToast } = useToasts();
-    const { tests, fingerprints, authState, loading, error, fetchData } = useDashboardData(addToast);
+    const { tests, fingerprints, authState, reports, loading, error, fetchData } = useDashboardData(addToast);
 
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -183,10 +183,18 @@ function Dashboard() {
     const handleViewFile = async (filename, type) => {
         setIsViewerLoading(true);
         setTestResult(null);
+        setViewerContent({});
         setIsViewerModalOpen(true);
         try {
             const data = await api.fetchFileContent(filename, type);
-            setViewerContent({ filename, content: data.content, type });
+            if (type === 'report') {
+                // If it's a report, parse the content and set it as a testResult
+                const reportJson = JSON.parse(data.content);
+                setTestResult(reportJson);
+                setViewerContent({ filename });
+            }
+            else { setViewerContent({ filename, content: data.content, type }); }
+
         } catch (err) {
             addToast(err.message, 'error');
             setIsViewerModalOpen(false);
@@ -252,6 +260,14 @@ function Dashboard() {
             <div className="panels-container">
                 <FilePanel title="Available Tests" files={tests} fileType="test" onCreate={() => setIsTestModalOpen(true)} onView={handleViewFile} onRun={handleRunTest} onDelete={handleDeleteFile} />
                 <FilePanel title="Available Page Fingerprints" files={fingerprints} fileType="fingerprint" onCreate={() => setIsFingerprintModalOpen(true)} onView={handleViewFile} onDelete={handleDeleteFile} />
+                <FilePanel
+                    title="Test Results"
+                    files={reports}
+                    fileType="report"
+                    onCreate={null} 
+                    onView={handleViewFile}
+                    onDelete={handleDeleteFile}
+                />
             </div>
 
             <CreateFingerprintModal isOpen={isFingerprintModalOpen} onClose={() => setIsFingerprintModalOpen(false)} onSubmit={handleFingerprintSubmit} isSubmitting={isSubmitting} />
