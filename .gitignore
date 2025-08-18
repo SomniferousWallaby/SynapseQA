@@ -3,6 +3,7 @@ elements/
 images/
 logs/
 tests/test_*
+results/
 
 # --- Environment & Secrets ---
 .venv

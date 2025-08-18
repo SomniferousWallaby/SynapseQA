@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Import the router objects from your new files
-from .routers import generation, auth, files
+from .routers import generation, auth, files, tests
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,6 +31,7 @@ app.add_middleware(
 app.include_router(generation.router)
 app.include_router(auth.router)
 app.include_router(files.router)
+app.include_router(tests.router)
 
 
 # --- Static Files Mount (for Production) ---

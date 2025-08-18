@@ -75,7 +75,7 @@ async def get_automated_auth_settings():
     Returns the last used settings for automated auth state creation.
     """
     if not os.path.exists(config.AUTH_SETTINGS_PATH):
-        logger.info("Automated auth settings file not found. Returning empty object.")
+        logger.info(f"Automated auth settings file not found at {config.AUTH_SETTINGS_PATH}. Returning empty object.")
         return {}
     
     try:
