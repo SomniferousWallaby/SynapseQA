@@ -78,3 +78,9 @@ export const runTest = (filename) => {
 export const fetchReports = () => {
     return fetch(`${API_BASE_URL}/files/reports`).then(handleResponse);
 };
+
+export const runAllTests = () => {
+    return fetch(`${API_BASE_URL}/tests/run-all`, {
+        method: 'POST',
+    }).then(handleResponse);
+};

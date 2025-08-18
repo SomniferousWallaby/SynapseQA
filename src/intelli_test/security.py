@@ -39,7 +39,7 @@ def get_secure_path_for_delete(file_type: str, filename: str) -> Path:
     A slightly different version for deletion that doesn't check for existence,
     as the file might be gone, but still performs security checks.
     """
-    if file_type not in ("test", "fingerprint"):
+    if file_type not in ("test", "fingerprint", "report"):
         raise HTTPException(status_code=400, detail="Invalid file type specified.")
 
     if ".." in filename or "/" in filename or "\\" in filename:

@@ -11,6 +11,40 @@
     margin-bottom: 2rem;
 }
 
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.panel-header h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.panel-header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.panel-header-actions .create-btn {
+    margin-bottom: 0;
+    width: auto;
+}
+
+.run-all-btn {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.run-all-btn:hover {
+    background-color: #e0a800;
+}
+
 .panels-container {
     display: flex;
     flex-wrap: wrap;

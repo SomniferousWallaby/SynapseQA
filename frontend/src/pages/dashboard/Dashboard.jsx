@@ -245,6 +245,22 @@ function Dashboard() {
         }, 3000); // Polling interval
     };
 
+    const handleRunAllTests = async () => {
+        const toastId = addToast('Starting full test suite run...', 'info', null);
+        try {
+            await api.runAllTests();
+            // Since this is a background task, we don't wait for it to finish.
+            // We just confirm it started.
+            removeToast(toastId);
+            addToast('Test suite run started. Results will appear as they complete.', 'success');
+            // The user can manually refresh the results panel later.
+        } catch (err) {
+            removeToast(toastId);
+            addToast(err.message, 'error');
+        }
+    };
+
+
 
     // --- RENDER LOGIC ---
     if (loading) return <div className="loading">Loading Dashboard...</div>;
@@ -258,8 +274,20 @@ function Dashboard() {
             <AuthStatus authState={authState} onSetAuthState={openAutoAuthModal} />
 
             <div className="panels-container">
-                <FilePanel title="Available Tests" files={tests} fileType="test" onCreate={() => setIsTestModalOpen(true)} onView={handleViewFile} onRun={handleRunTest} onDelete={handleDeleteFile} />
-                <FilePanel title="Available Page Fingerprints" files={fingerprints} fileType="fingerprint" onCreate={() => setIsFingerprintModalOpen(true)} onView={handleViewFile} onDelete={handleDeleteFile} />
+                <FilePanel 
+                    title="Tests" 
+                    files={tests} fileType="test" 
+                    onCreate={() => setIsTestModalOpen(true)} 
+                    onView={handleViewFile} 
+                    onRun={handleRunTest} 
+                    onDelete={handleDeleteFile} 
+                    onRunAll={handleRunAllTests} />
+                <FilePanel 
+                    title="Page Fingerprints" 
+                    files={fingerprints} fileType="fingerprint" 
+                    onCreate={() => setIsFingerprintModalOpen(true)} 
+                    onView={handleViewFile} 
+                    onDelete={handleDeleteFile} />
                 <FilePanel
                     title="Test Results"
                     files={reports}
