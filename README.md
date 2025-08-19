@@ -9,7 +9,7 @@ intelliTest is a full-stack application designed to streamline web testing by le
   * [Features](#features)
   * [Tech Stack](#tech-stack)
   * [Prerequisites](#prerequisites)
-  * [Installation & Setup](#installation-&-setup)
+  * [Installation & Setup](#installation-&-usage-with-Make-(Recommended))
   * [Running the Application](#running-the-application)
   * [How to Use](#how-to-use)
   * [Project Structure](#project-structure)
