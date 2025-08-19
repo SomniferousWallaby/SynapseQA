@@ -4,7 +4,7 @@ import argparse
 from playwright.async_api import async_playwright
 from intelli_test.utilities import config
 
-async def main(url: str = config.BASE_URL, login_path: str = config.LOGIN_PAGE_PATH):
+async def main(url: str = "https://google.com", login_path: str = "/login"):
     """
 
     Launches a browser, allows the user to log in manually,

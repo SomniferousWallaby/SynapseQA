@@ -21,16 +21,5 @@ AUTH_SETTINGS_PATH = os.path.join(PROJECT_ROOT.parent, "auth_creation_settings.j
 # The API key is the only truly required secret. We get it from the .env file, but it can also be set via the UI
 # The app will check for its presence at runtime via the UI instead of crashing on startup.
 API_KEY = os.getenv("GENAI_API_KEY")
-MODEL_NAME = "gemini-2.0-flash" # Default model TODO: Make this configurable via the UI
+MODEL_NAME = os.getenv("MODEL_NAME") # Default model TODO: Make this configurable via the UI
 # TODO: Add greater config options for the model, like other providers, local models, etc.
-
-
-# --- Default Test Values (Optional Overrides) ---
-# These can be set in the .env file to use some of the functions not utilized by the UI, but they are not required.
-# The application will primarily use values entered by the user in the dashboard.
-BASE_URL = os.getenv("BASE_URL", "")
-LOGIN_PAGE_PATH = os.getenv("LOGIN_PAGE_PATH", "")
-ACCOUNT_PAGE_PATH = os.getenv("ACCOUNT_PAGE_PATH", "")
-TEST_USER = os.getenv("TEST_USER", "")
-PASSWORD = os.getenv("PASSWORD", "")
-INVALID_USER = os.getenv("INVALID_USER", "")
