@@ -184,6 +184,8 @@ You'll need to run the backend and frontend servers in two separate terminals.
 
 ### 1\. Set Authentication State (First-Time Use)
 
+Initial versions only support Google Gemini Flash 2.0 Models, so please configure an API Key that has access to that model.
+
 For testing applications that require a login, the first step is to create an `auth_state.json` file.
 
   * Click the **Set Auth State** button.

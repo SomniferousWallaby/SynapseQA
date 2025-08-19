@@ -84,3 +84,15 @@ export const runAllTests = () => {
         method: 'POST',
     }).then(handleResponse);
 };
+
+export const getApiKeyStatus = () => {
+    return fetch(`${API_BASE_URL}/settings/api-key-status`).then(handleResponse);
+};
+
+export const saveApiKey = (apiKey) => {
+    return fetch(`${API_BASE_URL}/settings/api-key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey }),
+    }).then(handleResponse);
+};

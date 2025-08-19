@@ -20,6 +20,85 @@
     margin-bottom: 1rem;
 }
 
+/* --- Setup Widgets --- */
+.setup-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+    max-width: 924px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.setup-widget {
+    background-color: white;
+    border: 1px solid #e9e9e9;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.widget-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.status-indicator {
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.status-indicator.status-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-indicator.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.widget-description {
+    color: #666;
+    font-size: 0.9rem;
+    flex-grow: 1; /* Pushes the footer to the bottom */
+    margin-bottom: 1rem;
+}
+
+.widget-footer {
+    text-align: right;
+}
+
+.widget-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.widget-btn:hover {
+    background-color: #0056b3;
+}
+
 .panel-header h2 {
     margin: 0;
     padding: 0;
