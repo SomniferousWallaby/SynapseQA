@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 
 // Custom Hooks
@@ -16,6 +16,7 @@ import CreateTestModal from './components/modals/CreateTestModal';
 import CreateFingerprintModal from './components/modals/CreateFingerprintModal';
 import CreateAuthStateModal from './components/modals/SetAuthStateModal';
 import FileViewerModal from './components/modals/FileViewerModal';
+import SettingsModal from './components/modals/SettingsModal';
 
 function Dashboard() {
     // --- STATE MANAGEMENT ---
@@ -28,12 +29,27 @@ function Dashboard() {
     const [isTestModalOpen, setIsTestModalOpen] = useState(false);
     const [isAutoAuthModalOpen, setIsAutoAuthModalOpen] = useState(false);
     const [isViewerModalOpen, setIsViewerModalOpen] = useState(false);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); // <-- Add this
     
     // Form & Viewer State
     const [autoAuthForm, setAutoAuthForm] = useState({ /* initial empty state */ });
     const [viewerContent, setViewerContent] = useState({});
     const [testResult, setTestResult] = useState(null);
     const [isViewerLoading, setIsViewerLoading] = useState(false);
+    const [apiKeyStatus, setApiKeyStatus] = useState({ is_set: false });
+
+    // --- EFFECTS ---
+     useEffect(() => {
+        const checkApiKey = async () => {
+            try {
+                const status = await api.getApiKeyStatus();
+                setApiKeyStatus(status);
+            } catch (err) {
+                console.error("Could not fetch API key status:", err);
+            }
+        };
+        checkApiKey();
+    }, []);
 
     // --- EVENT HANDLERS ---
     const handleAutoAuthFormChange = (e) => {
@@ -249,18 +265,27 @@ function Dashboard() {
         const toastId = addToast('Starting full test suite run...', 'info', null);
         try {
             await api.runAllTests();
-            // Since this is a background task, we don't wait for it to finish.
-            // We just confirm it started.
             removeToast(toastId);
             addToast('Test suite run started. Results will appear as they complete.', 'success');
-            // The user can manually refresh the results panel later.
         } catch (err) {
             removeToast(toastId);
             addToast(err.message, 'error');
         }
     };
 
-
+    const handleSaveApiKey = async (apiKey) => {
+        setIsSubmitting(true);
+        try {
+            const result = await api.saveApiKey(apiKey);
+            addToast(result.message, 'success');
+            setIsSettingsModalOpen(false);
+            setApiKeyStatus({ is_set: true }); // Optimistically update status
+        } catch (err) {
+            addToast(err.message, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     // --- RENDER LOGIC ---
     if (loading) return <div className="loading">Loading Dashboard...</div>;
@@ -270,6 +295,45 @@ function Dashboard() {
         <div className="dashboard">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
             <h1>IntelliTest Dashboard</h1>
+
+            <div className="setup-container">
+                {/* API Key Widget */}
+                <div className="setup-widget">
+                    <div className="widget-header">
+                        <h4>API Key</h4>
+                        <span className={`status-indicator ${apiKeyStatus.is_set ? 'status-success' : 'status-error'}`}>
+                            {apiKeyStatus.is_set ? 'Set' : 'Not Set'}
+                        </span>
+                    </div>
+                    <p className="widget-description">
+                        The Google AI API key is used for all test and element generation.
+                    </p>
+                    <div className="widget-footer">
+                        <button className="widget-btn" onClick={() => setIsSettingsModalOpen(true)}>
+                            Settings
+                        </button>
+                    </div>
+                </div>
+
+                {/* Auth State Widget */}
+                <div className="setup-widget">
+                    <div className="widget-header">
+                        <h4>Authentication State</h4>
+                        <span className={`status-indicator ${!authState.exists || authState.is_expired ? 'status-error' : 'status-success'}`}>
+                            {!authState.exists ? 'Missing' : authState.is_expired ? 'Expired' : 'Valid'}
+                        </span>
+                    </div>
+                    <p className="widget-description">
+                        A saved browser session used for tests that require a login.
+                    </p>
+                    <div className="widget-footer">
+                        <button className="widget-btn" onClick={openAutoAuthModal}>
+                            {authState.exists ? 'Update Auth State' : 'Set Auth State'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
 
             <AuthStatus authState={authState} onSetAuthState={openAutoAuthModal} />
 
@@ -294,14 +358,39 @@ function Dashboard() {
                     fileType="report"
                     onCreate={null} 
                     onView={handleViewFile}
-                    onDelete={handleDeleteFile}
-                />
+                    onDelete={handleDeleteFile} />
             </div>
 
-            <CreateFingerprintModal isOpen={isFingerprintModalOpen} onClose={() => setIsFingerprintModalOpen(false)} onSubmit={handleFingerprintSubmit} isSubmitting={isSubmitting} />
-            <CreateAuthStateModal isOpen={isAutoAuthModalOpen} onClose={() => setIsAutoAuthModalOpen(false)} onSubmit={handleAutoAuthSubmit} fingerprints={fingerprints} isSubmitting={isSubmitting} formState={autoAuthForm} onFormChange={handleAutoAuthFormChange} />
-            <CreateTestModal isOpen={isTestModalOpen} onClose={() => setIsTestModalOpen(false)} onSubmit={handleTestSubmit} fingerprints={fingerprints} isSubmitting={isSubmitting} />
-            <FileViewerModal isOpen={isViewerModalOpen} onClose={() => setIsViewerModalOpen(false)} isLoading={isViewerLoading} testResult={testResult} content={viewerContent} />
+            <CreateFingerprintModal 
+                isOpen={isFingerprintModalOpen} 
+                onClose={() => setIsFingerprintModalOpen(false)} 
+                onSubmit={handleFingerprintSubmit} 
+                isSubmitting={isSubmitting} />
+            <CreateAuthStateModal 
+                isOpen={isAutoAuthModalOpen}
+                onClose={() => setIsAutoAuthModalOpen(false)} 
+                onSubmit={handleAutoAuthSubmit}
+                fingerprints={fingerprints} 
+                isSubmitting={isSubmitting}
+                formState={autoAuthForm}
+                onFormChange={handleAutoAuthFormChange} />
+            <CreateTestModal 
+                isOpen={isTestModalOpen} 
+                onClose={() => setIsTestModalOpen(false)} 
+                onSubmit={handleTestSubmit} 
+                fingerprints={fingerprints} 
+                isSubmitting={isSubmitting} />
+            <FileViewerModal 
+                isOpen={isViewerModalOpen} 
+                onClose={() => setIsViewerModalOpen(false)} 
+                isLoading={isViewerLoading} 
+                testResult={testResult} 
+                content={viewerContent} />
+            <SettingsModal 
+                isOpen={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
+                onSave={handleSaveApiKey}
+                isSubmitting={isSubmitting} />
         </div>
     );
 }
