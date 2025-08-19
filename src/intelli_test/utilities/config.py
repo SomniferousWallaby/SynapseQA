@@ -26,7 +26,7 @@ MODEL_NAME = "gemini-2.0-flash" # Default model TODO: Make this configurable via
 
 
 # --- Default Test Values (Optional Overrides) ---
-# These can be set in the .env file to use some of the function not utilized by the UI, but they are not required.
+# These can be set in the .env file to use some of the functions not utilized by the UI, but they are not required.
 # The application will primarily use values entered by the user in the dashboard.
 BASE_URL = os.getenv("BASE_URL", "")
 LOGIN_PAGE_PATH = os.getenv("LOGIN_PAGE_PATH", "")
