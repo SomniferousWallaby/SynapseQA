@@ -9,7 +9,7 @@ SynapseQA is a full-stack application designed to streamline web testing by leve
   * [Features](#features)
   * [Tech Stack](#tech-stack)
   * [Prerequisites](#prerequisites)
-  * [Installation & Setup](#installation-&-usage-with-make-recommended)
+  * [Installation & Setup](#installation--usage-with-make-recommended)
   * [Running the Application](#running-the-application)
   * [How to Use](#how-to-use)
   * [Project Structure](#project-structure)
