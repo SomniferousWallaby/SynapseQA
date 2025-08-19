@@ -188,11 +188,13 @@ You'll need to run the backend and frontend servers in two separate terminals.
 
 Initial versions only support Google Gemini Flash 2.0 Models, so please configure an API Key that has access to that model.
 
-For testing applications that require a login, the first step is to create an `auth_state.json` file.
+For testing applications that require a login, the first step is to create an `auth_state.json` file. Creating a fingerprint file prior to this step for the login process to use can help with reliability of the login process.
 
   * Click the **Set Auth State** button.
   * Fill in the login URL and provide simple, step-by-step instructions for the AI to follow (e.g., "Enter the username into the email field, enter the password into the password field, then click the login button.").
   * Click **Generate Auth State**. This will open a browser, log in, and save the session cookies and local storage.
+
+If you are unable to automatically create an authorization state, run the `create_auth_state.py` script to trigger a manual process for logging in and saving the browser state. This can be used for subsequent file generation/test actions.
 
 ### 2\. Fingerprint a Page
 
