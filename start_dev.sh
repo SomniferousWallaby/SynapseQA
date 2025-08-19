@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script starts both the frontend and backend development servers for intelliTest.
+# This script starts both the frontend and backend development servers for SynapseQA.
 
 # Exit the script immediately if any command fails.
 set -e

@@ -293,7 +293,7 @@ function Dashboard() {
     return (
         <div className="dashboard">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
-            <h1>IntelliTest Dashboard</h1>
+            <h1>SynapseQA Dashboard</h1>
 
             <div className="setup-container">
                 {/* API Key Widget */}

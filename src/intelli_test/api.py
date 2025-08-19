@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="intelliTest API",
+    title="SynapseQA API",
     description="API for orchestrating AI-powered web testing.",
     version="1.0.0"
 )
@@ -49,4 +49,4 @@ else:
 # --- Root Endpoint ---
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the intelliTest API. Visit /docs for documentation."}
+    return {"message": "Welcome to the SynapseQA API. Visit /docs for documentation."}

@@ -1,4 +1,4 @@
-# Makefile for intelliTest
+# Makefile for SynapseQA
 
 .PHONY: help install setup-dev api create-auth-state test clean
 

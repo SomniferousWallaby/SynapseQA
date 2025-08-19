@@ -1,8 +1,8 @@
-# intelliTest
+# SynapseQA
 
 > AI-powered test automation for web applications.
 
-intelliTest is a full-stack application designed to streamline web testing by leveraging generative AI. It provides a user-friendly dashboard to automatically generate page element "fingerprints", write `pytest` tests from natural language descriptions, and run/manage your entire test suite without leaving the browser.
+SynapseQA is a full-stack application designed to streamline web testing by leveraging generative AI. It provides a user-friendly dashboard to automatically generate page element "fingerprints", write `pytest` tests from natural language descriptions, and run/manage your entire test suite without leaving the browser.
 
 ## Table of Contents
 
@@ -119,7 +119,7 @@ The application will now be running with the API at `http://127.0.0.1:8000` and 
 1.  **Clone the repository:**
     ```bash
     git clone <your-repository-url>
-    cd intelliTest
+    cd synapseqa
     ```
 2.  **Create and activate a virtual environment:**
     ```bash
