@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
+import largeBanner from '../../assets/largeBanner.png';
 
 // Custom Hooks
 import { useToasts } from '../../hooks/useToasts';
@@ -293,7 +294,9 @@ function Dashboard() {
     return (
         <div className="dashboard">
             <ToastContainer toasts={toasts} removeToast={removeToast} />
-            <h1>SynapseQA Dashboard</h1>
+            <div className="dashboard-header">
+                <img src={largeBanner} alt="SynapseQA Banner" />
+            </div>
 
             <div className="setup-container">
                 {/* API Key Widget */}
