@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from playwright.sync_api import sync_playwright, Page
-from . import config, htmlSimplifier
+from intelli_test.utilities import config, htmlSimplifier
 
 # Logging is configured at the application entry point (e.g., in api.py or conftest.py).
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
     logger.info(f"Starting locator generation for page: {page.title()}")
     
     # Wait for the page to be fully loaded to ensure all dynamic content is present.
-    page.wait_for_load_state('networkidle', timeout=50000)
+    page.wait_for_load_state('domcontentloaded', timeout=50000)
     
     simplified_html = htmlSimplifier.simplify_html(page)
     if not simplified_html:
@@ -150,7 +150,7 @@ def generate_fingerprint_file(target_url: str, output_file: str, use_authenticat
         
         logger.info(f"Navigating to {target_url}...")
         page.goto(target_url)
-        page.wait_for_load_state('networkidle')
+        page.wait_for_load_state('domcontentloaded')
 
         # Verify that we landed on the correct page and were not redirected.
         if target_url != page.url and not allow_redirects:

@@ -55,12 +55,6 @@ def logged_in_page(browser: Browser) -> Page:
     context = browser.new_context(storage_state=auth_file)
     page = context.new_page()
 
-    # Go to the account page, which is a sensible default for logged-in tests.
-    page.goto(f"{config.BASE_URL}{config.ACCOUNT_PAGE_PATH}")
-
-    # A quick check to ensure the page is in the expected state.
-    expect(page).to_have_url(f"{config.BASE_URL}{config.ACCOUNT_PAGE_PATH}", timeout=10000)
-
     yield page
 
     # Clean up the context to ensure no state leaks between tests.

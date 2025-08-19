@@ -266,7 +266,7 @@ function Dashboard() {
         try {
             await api.runAllTests();
             removeToast(toastId);
-            addToast('Test suite run started. Results will appear as they complete.', 'success');
+            addToast('Test suite run started. Result file will appear when complete.', 'success');
         } catch (err) {
             removeToast(toastId);
             addToast(err.message, 'error');
