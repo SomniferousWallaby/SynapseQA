@@ -218,6 +218,7 @@ To make test generation more accurate, create a fingerprint of the page you want
   * **Run a single test:** Click the green "play" icon next to any test in the "Available Tests" panel.
   * **Run all tests:** Click the yellow "Run All" button at the top of the "Available Tests" panel.
   * **View results:** After a test run, a new entry will appear in the "Test Results" panel. Click the "view" icon to see a detailed report, including tracebacks for any failures.
+  * A more detailed results report will be saved to the `reports` directory at the root of the project on test run completion. Only the most recent run will be available.
 
 -----
 
