@@ -10,7 +10,6 @@ import * as api from '../../services/apiService';
 
 // Components
 import ToastContainer from '../../components/toast/ToastContainer';
-import AuthStatus from './components/AuthStatus';
 import FilePanel from './components/FilePanel';
 import CreateTestModal from './components/modals/CreateTestModal';
 import CreateFingerprintModal from './components/modals/CreateFingerprintModal';
@@ -333,9 +332,6 @@ function Dashboard() {
                     </div>
                 </div>
             </div>
-
-
-            <AuthStatus authState={authState} onSetAuthState={openAutoAuthModal} />
 
             <div className="panels-container">
                 <FilePanel 
