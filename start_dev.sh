@@ -5,6 +5,14 @@
 # Exit the script immediately if any command fails.
 set -e
 
+# Activate the virtual environment
+if [ -d "venv" ]; then
+    source venv/bin/activate
+else
+    echo "Virtual environment not found! Please create it with 'python3 -m venv venv'"
+    exit 1
+fi
+
 # Define the port the backend will use. Defaults to 8000.
 BACKEND_PORT=${1:-8000}
 
@@ -39,4 +47,4 @@ echo "--- Starting Frontend Development Server (in background) ---"
 
 echo "--- Starting Backend API Server (in foreground) on port $BACKEND_PORT ---"
 echo "Press Ctrl+C to stop both servers."
-python -m uvicorn src.intelli_test.api:app --reload --reload-dir src --port $BACKEND_PORT
+(cd src && python -m uvicorn intelli_test.api:app --reload --reload-dir . --port $BACKEND_PORT)
