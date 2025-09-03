@@ -85,25 +85,6 @@ source venv/bin/activate
 2. Run the script
     `./start_dev.sh`
 
-
-#### Using make
-You'll need two separate terminals to run the backend and frontend servers.
-
-**Start the Backend Server:**
-
-```bash
-make api
-```
-
-**Start the Frontend Server:**
-(From the `frontend/` directory)
-
-```bash
-npm run dev
-```
-
-The application will now be running with the API at `http://127.0.0.1:8000` and the UI at `http://localhost:5174` (or a similar port).
-
 -----
 
 ### Other Useful Commands
@@ -114,79 +95,10 @@ The application will now be running with the API at `http://127.0.0.1:8000` and 
 
 -----
 
-## Manual Installation and Usage
-
-### Backend Setup
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repository-url>
-    cd synapseqa
-    ```
-2.  **Create and activate a virtual environment:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
-3.  **Install Python dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  **Set up environment variables:**
-      * Create a file named `.env` in the project's root directory.
-      * Add your Google AI API key to it:
-        ```
-        API_KEY="YOUR_GOOGLE_AI_API_KEY_HERE"
-        ```
-
-### Frontend Setup
-
-1.  **Navigate to the frontend directory:**
-    ```bash
-    cd frontend
-    ```
-2.  **Install Node.js dependencies:**
-    ```bash
-    npm install
-    ```
-
------
-
-## Running the Application
-
-You'll need to run the backend and frontend servers in two separate terminals.
-
-1.  **Start the Backend Server**
-
-      * From the **project root** directory, run:
-
-    <!-- end list -->
-
-    ```bash
-    uvicorn src.intelli_test.main:app --reload
-    ```
-
-      * The API will be available at `http://127.0.0.1:8000`.
-
-2.  **Start the Frontend Dev Server**
-
-      * From the **`frontend/`** directory, run:
-
-    <!-- end list -->
-
-    ```bash
-    npm run dev
-    ```
-
-      * The dashboard will be available at `http://localhost:5174` (or whatever port Vite assigns).
-
------
-
 ## How to Use
 
 ### 1\. Set Authentication State (First-Time Use)
-
-Initial versions only support Google Gemini Flash 2.0 Models, so please configure an API Key that has access to that model.
+Using the UI, access settings in the API Key setup Modal. Here you will be prompted to input a Google API Key. Initial versions only support Google Gemini Flash 2.0 Models, so please configure an API Key that has access to that model.
 
 For testing applications that require a login, the first step is to create an `auth_state.json` file. Creating a fingerprint file prior to this step for the login process to use can help with reliability of the login process.
 
