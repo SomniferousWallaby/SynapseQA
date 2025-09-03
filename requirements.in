@@ -7,3 +7,5 @@ scikit-image
 opencv-python
 google-generativeai
 beautifulsoup4
+uvicorn
+fastapi
