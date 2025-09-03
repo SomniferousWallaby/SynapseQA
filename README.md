@@ -51,8 +51,8 @@ This project includes a `Makefile` to automate setup and common development task
 ### 1\. Prerequisites
 
   - Ensure you have `make`, Python 3.10+, and Node.js 18+ installed.
-  - Optional
-      - Create a `.env` file in the project root. You can copy the `env.example` file if it exists.
+  - Optional (this can also be set in the UI)
+      - Create a `.env` file in the project root. You can copy the `env.example`.
       - Add your Google AI API key to the `.env` file:
     ```
     GENAI_API_KEY="YOUR_GOOGLE_AI_API_KEY_HERE"
