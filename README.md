@@ -61,7 +61,7 @@ This project includes a `Makefile` to automate setup and common development task
 
 -----
 
-### 2\. One-Step Development Setup
+### 2\. Setup
 
 Run the following command from the project root. This single command will create the Python virtual environment, install all backend and frontend dependencies, and download the necessary Playwright browsers.
 
