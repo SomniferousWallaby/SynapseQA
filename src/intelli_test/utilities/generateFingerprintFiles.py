@@ -106,6 +106,8 @@ def generate_locators_for_page(page: Page, output_path: str, target_url: str):
             "url": target_url,
             "elements": locators
         }
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         # Save the generated locators to the specified file.
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(data_to_save, f, indent=2)
